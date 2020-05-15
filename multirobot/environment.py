@@ -43,7 +43,10 @@ class MultiAgentEnv(maenv.MultiAgentEnv):
             self.render_geoms = []
             self.render_geoms_xform = []
             for entity in self.world.entities:
-                geom = rendering.make_circle(entity.size)
+                if 'vehicle' in entity.name:
+                    geom = rendering.make_circle(entity.size)
+                else:
+                    geom = rendering.make_circle(entity.size)
                 xform = rendering.Transform()
                 if 'agent' in entity.name:
                     geom.set_color(*entity.color, alpha=0.5)

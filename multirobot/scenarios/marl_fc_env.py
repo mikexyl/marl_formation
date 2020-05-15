@@ -83,10 +83,15 @@ class Scenario(BaseScenario):
     def reward(self, agent, world):
         return self.fc_reward(agent, world)
 
-    def fc_reward(self, agent, world):
+    def fc_reward(self, agent, world, obs=np.zeros((10,10))):
+        # 0 nothing
+        # 1 obstacle
+        # 2 vehicle
+        # 3 goal
         return 0
 
     def observation(self, agent, world):
+        # todo need a form of observation
         # get positions of all entities in this agent's reference frame
         entity_pos = []
         for entity in world.landmarks:
