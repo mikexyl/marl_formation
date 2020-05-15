@@ -38,13 +38,13 @@ class Scenario(BaseScenario):
             landmark.movable = False
             landmark.size = 0.3
             while True:
-                landmark.state.p_pos = np.random.uniform(0, world.size_x, world.dim_p)
+                landmark.state.p_pos = np.random.uniform(-world.size_x, world.size_x, world.dim_p)
                 # if landmark is too close to vehicles, repick pos
                 # todo need a new rule to set landmark, in case they are too far
-                if not (world.centroid[0] - world.radius - 0.1 < landmark.state.p_pos[0] < world.centroid[
-                    0] + world.radius + 0.1 and
-                        world.centroid[1] - world.radius - 0.1 < landmark.state.p_pos[1] < world.centroid[
-                            1] + world.radius + 0.1):
+                if not (world.centroid[0] - world.radius - 0.5 < landmark.state.p_pos[0] < world.centroid[
+                    0] + world.radius + 0.5 and
+                        world.centroid[1] - world.radius - 0.5 < landmark.state.p_pos[1] < world.centroid[
+                            1] + world.radius + 0.5):
                     break
             landmark.state.p_vel = np.zeros(world.dim_p)
             landmark.color = np.array([0, 0, 0])

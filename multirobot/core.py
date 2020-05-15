@@ -57,11 +57,11 @@ class World(macore.World):
         self.vehicles = []
         self.goal_landmark = []
         # square world now, only size x is used
-        self.size_x = 10
-        self.size_y = 10
+        self.size_x = 5
+        self.size_y = 5
         self.num_agents = 0
         self.num_vehicles = 0
-        self.centroid = np.array([1.5, 1.5])
+        self.centroid = np.array([-3.5, -3.5])
         self.radius = 1
 
     # override, return all vehicles

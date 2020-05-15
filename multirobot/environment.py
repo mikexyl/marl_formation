@@ -40,7 +40,7 @@ class MultiAgentEnv(maenv.MultiAgentEnv):
             # import rendering only if we need it (and don't import for headless machines)
             # from gym.envs.classic_control import rendering
             from multiagent import rendering
-            from multirobot import mrrendering
+            from multirobot import rendering as mrrendering
             self.render_geoms = []
             self.render_geoms_xform = []
             for entity in self.world.entities:
@@ -54,9 +54,9 @@ class MultiAgentEnv(maenv.MultiAgentEnv):
                 self.render_geoms.append(geom)
                 self.render_geoms_xform.append(xform)
 
-            #render fov of vehicles
+            # render fov of vehicles
             for vehicle in self.world.vehicles:
-                geom = mrrendering.make_sector(vehicle.state.pos_ang, vehicle.fov_ang,vehicle.fov_dist)
+                geom = mrrendering.make_sector(vehicle.state.p_ang, vehicle.fov_ang, vehicle.fov_dist)
                 xform = rendering.Transform()
                 geom.set_color(*vehicle.color)
                 geom.add_attr(xform)
@@ -74,7 +74,8 @@ class MultiAgentEnv(maenv.MultiAgentEnv):
             # update bounds to center around agent
             if self.shared_viewer:
                 pos = np.array([self.world.size_x / 2, self.world.size_y / 2])
-                self.viewers[i].set_bounds(-1, self.world.size_x + 1, -1, self.world.size_y + 1)
+                self.viewers[i].set_bounds(-self.world.size_x - 1, self.world.size_x + 1, -self.world.size_y - 1,
+                                           self.world.size_y + 1)
             else:
                 cam_range = 1
                 pos = self.agents[i].state.p_pos
@@ -84,8 +85,10 @@ class MultiAgentEnv(maenv.MultiAgentEnv):
             for e, entity in enumerate(self.world.entities):
                 self.render_geoms_xform[e].set_translation(*entity.state.p_pos)
 
-            #update fov sectors
-
+            # update fov sectors
+            e = len(self.world.entities)
+            for v, vehicle in enumerate(self.world.vehicles):
+                self.render_geoms_xform[e + v].set_translation(*vehicle.state.p_pos)
 
             # render to display or array
             results.append(self.viewers[i].render(return_rgb_array=mode == 'rgb_array'))
