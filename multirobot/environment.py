@@ -40,18 +40,25 @@ class MultiAgentEnv(maenv.MultiAgentEnv):
             # import rendering only if we need it (and don't import for headless machines)
             # from gym.envs.classic_control import rendering
             from multiagent import rendering
+            from multirobot import mrrendering
             self.render_geoms = []
             self.render_geoms_xform = []
             for entity in self.world.entities:
-                if 'vehicle' in entity.name:
-                    geom = rendering.make_circle(entity.size)
-                else:
-                    geom = rendering.make_circle(entity.size)
+                geom = rendering.make_circle(entity.size)
                 xform = rendering.Transform()
                 if 'agent' in entity.name:
                     geom.set_color(*entity.color, alpha=0.5)
                 else:
                     geom.set_color(*entity.color)
+                geom.add_attr(xform)
+                self.render_geoms.append(geom)
+                self.render_geoms_xform.append(xform)
+
+            #render fov of vehicles
+            for vehicle in self.world.vehicles:
+                geom = mrrendering.make_sector(vehicle.state.pos_ang, vehicle.fov_ang,vehicle.fov_dist)
+                xform = rendering.Transform()
+                geom.set_color(*vehicle.color)
                 geom.add_attr(xform)
                 self.render_geoms.append(geom)
                 self.render_geoms_xform.append(xform)
@@ -76,6 +83,10 @@ class MultiAgentEnv(maenv.MultiAgentEnv):
             # update geometry positions
             for e, entity in enumerate(self.world.entities):
                 self.render_geoms_xform[e].set_translation(*entity.state.p_pos)
+
+            #update fov sectors
+
+
             # render to display or array
             results.append(self.viewers[i].render(return_rgb_array=mode == 'rgb_array'))
 
