@@ -18,14 +18,14 @@ class Scenario(BaseScenario):
         num_agents = 0
         world.num_agents = num_agents
         world.num_vehicles = num_vehicles
-        num_landmarks = 10
+        num_landmarks = 16
 
         world.vehicles = [Vehicle() for i in range(num_vehicles)]
         for i, vehicle in enumerate(world.vehicles):
             vehicle.name = 'vehicle %d' % i
             vehicle.collide = False
             vehicle.silent = False
-            vehicle.size = 0.3
+            vehicle.size = 0.15
             if i == 0:
                 vehicle.color = np.array([1, 0, 0])
             else:
@@ -36,14 +36,22 @@ class Scenario(BaseScenario):
             landmark.name = 'landmark %d' % i
             landmark.collide = False
             landmark.movable = False
-            landmark.size = 1
-            landmark.state.p_pos = np.random.uniform(0, world.size_x, world.dim_p)
+            landmark.size = 0.3
+            while True:
+                landmark.state.p_pos = np.random.uniform(0, world.size_x, world.dim_p)
+                # if landmark is too close to vehicles, repick pos
+                # todo need a new rule to set landmark, in case they are too far
+                if not (world.centroid[0] - world.radius - 0.1 < landmark.state.p_pos[0] < world.centroid[
+                    0] + world.radius + 0.1 and
+                        world.centroid[1] - world.radius - 0.1 < landmark.state.p_pos[1] < world.centroid[
+                            1] + world.radius + 0.1):
+                    break
             landmark.state.p_vel = np.zeros(world.dim_p)
             landmark.color = np.array([0, 0, 0])
 
         world.goal_landmark = Landmark()
         world.goal_landmark.name = 'goal landmark'
-        world.goal_landmark.state.p_pos = np.array([world.size_x - 2, world.size_x - 2])
+        world.goal_landmark.state.p_pos = np.array([world.size_x - 1, world.size_x - 1])
         world.goal_landmark.state.p_vel = np.zeros(world.dim_p)
         world.goal_landmark.collide = False
         world.goal_landmark.movable = False
@@ -63,11 +71,10 @@ class Scenario(BaseScenario):
     def reset_vehicles(self, world):
         # start point set as controid at (1.5,1.5)
         # todo make it an option to choose start point
-        centroid = np.array([1.5, 1.5])
-        radius = np.array([0, 1])
+        radius = np.array([0, world.radius])
         alpha = math.pi * 2 / world.num_vehicles
         for i, vehicle in enumerate(world.vehicles):
-            vehicle.state.p_pos = centroid + radius.dot(
+            vehicle.state.p_pos = world.centroid + radius.dot(
                 np.array([(math.cos(alpha * i), math.sin(alpha * i)), (math.sin(alpha * i), math.cos(alpha * i))]))
             vehicle.state.p_vel = np.zeros(world.dim_p)
             vehicle.state.p_ang = math.pi / 2
@@ -104,13 +111,13 @@ class Scenario(BaseScenario):
         # convert to dist and angle
         entity_in_fov = []
         entity_pos = np.concatenate(entity_pos + other_agent_pos + other_vehicle_pos)
-        for i in range(0, entity_pos.__len__() // 2):
+        for i in range(0, len(entity_pos) // 2):
             entity_pos_cur = entity_pos[i * 2: i * 2 + 2]
             entity_dist_cur = np.linalg.norm(entity_pos_cur)
             entity_ang_cur = math.atan2(entity_pos_cur[1], entity_pos_cur[0])
             if entity_dist_cur <= agent.fov_dist and \
-                    math.fabs(entity_ang_cur - agent.state.p_ang) <= agent.fov_ang / 2 and \
-                    math.fabs(entity_ang_cur - agent.state.p_ang) <= agent.fov_ang / 2 + math.pi * 2:
+                    (math.fabs(entity_ang_cur - agent.state.p_ang) <= agent.fov_ang / 2 or
+                     math.fabs(entity_ang_cur - agent.state.p_ang) <= agent.fov_ang / 2 + math.pi * 2):
                 entity_in_fov.append(np.array([entity_dist_cur, entity_ang_cur]))
             else:
                 # todo how to deal with objects unseen

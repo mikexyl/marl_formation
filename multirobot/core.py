@@ -1,16 +1,16 @@
 import math
 
-import multiagent.core as ma
+import multiagent.core as macore
 import numpy as np
 
 
-class VehicleState(ma.AgentState):
+class VehicleState(macore.AgentState):
     def __init__(self):
         super(VehicleState, self).__init__()
         self.p_ang = None
 
 
-class VehicleAction(ma.Action):
+class VehicleAction(macore.Action):
     def __init__(self):
         super(VehicleAction, self).__init__()
 
@@ -21,7 +21,7 @@ class VehicleBodySpeed(object):
         self.p_vel_ang = None
 
 
-class Vehicle(ma.Agent):
+class Vehicle(macore.Agent):
     def __init__(self):
         super(Vehicle, self).__init__()
         self.max_vel_x = 1
@@ -34,6 +34,7 @@ class Vehicle(ma.Agent):
         self.fov_ang = 2 / 3 * math.pi
         self.fov_dist = 3
         self.obs = None
+        self.accel = 1
 
     # a minimised vehicle model
     # todo a better model
@@ -50,7 +51,7 @@ class Vehicle(ma.Agent):
         self.body_speed.p_vel_ang = self.action.u[1] * self.max_vel_ang
 
 
-class World(ma.World):
+class World(macore.World):
     def __init__(self):
         super(World, self).__init__()
         self.vehicles = []
@@ -60,6 +61,8 @@ class World(ma.World):
         self.size_y = 10
         self.num_agents = 0
         self.num_vehicles = 0
+        self.centroid = np.array([1.5, 1.5])
+        self.radius = 1
 
     # override, return all vehicles
     @property
