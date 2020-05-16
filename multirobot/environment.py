@@ -135,19 +135,20 @@ class MultiAgentEnv(maenv.MultiAgentEnv):
             action = act
         elif isinstance(action_space, spaces.Box):
             # todo this looks terrible
-            if action[0] < action_space.low[0]:
-                action[0] = action_space.low[0]
-            elif action[0] > action_space.high[0]:
-                action[0] = action_space.high[0]
 
-            if action[1] < action_space.low[1]:
-                action[1] = action_space.low[1]
-            elif action[1] > action_space.high[1]:
-                action[1] = action_space.high[1]
+            # if action[0] < action_space.low[0]:
+            #     action[0] = action_space.low[0]
+            # elif action[0] > action_space.high[0]:
+            #     action[0] = action_space.high[0]
+            #
+            # if action[1] < action_space.low[1]:
+            #     action[1] = action_space.low[1]
+            # elif action[1] > action_space.high[1]:
+            #     action[1] = action_space.high[1]
+            action = [action]
         else:
             action = [action]
 
-        # todo what's the origin structure of action? how does it be deleted all?
         if agent.movable:
             # physical action
             if self.discrete_action_input:
@@ -170,7 +171,7 @@ class MultiAgentEnv(maenv.MultiAgentEnv):
                     agent.action.u[0] += action[0][0]
                     agent.action.u[1] += action[0][1]
                 else:
-                    agent.action.u = action
+                    agent.action.u = action[0]
             sensitivity = 5.0
             if agent.accel is not None:
                 sensitivity = agent.accel
@@ -184,7 +185,6 @@ class MultiAgentEnv(maenv.MultiAgentEnv):
             else:
                 agent.action.c = action[0]
             action = action[1:]
-        else:
-            action = action[1:]
+
             # make sure we used all elements of action
         assert len(action) == 0

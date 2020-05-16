@@ -2,6 +2,7 @@ import argparse
 import pickle
 import time
 
+import glog
 import maddpg.common.tf_util as U
 import numpy as np
 import tensorflow as tf
@@ -13,7 +14,7 @@ def parse_args():
     parser = argparse.ArgumentParser("Reinforcement Learning experiments for multiagent environments")
     # Environment
     parser.add_argument("--scenario", type=str, default="simple", help="name of the scenario script")
-    parser.add_argument("--max-episode-len", type=int, default=25, help="maximum episode length")
+    parser.add_argument("--max-episode-len", type=int, default=200, help="maximum episode length")
     parser.add_argument("--num-episodes", type=int, default=60000, help="number of episodes")
     parser.add_argument("--num-adversaries", type=int, default=0, help="number of adversaries")
     parser.add_argument("--good-policy", type=str, default="maddpg", help="policy for good agents")
@@ -121,6 +122,7 @@ def train(arglist):
         print('Starting iterations...')
         while True:
             # get action
+            # todo need to change the output action pd, to shape the action
             action_n = [agent.action(obs) for agent, obs in zip(trainers, obs_n)]
             # environment step
             new_obs_n, rew_n, done_n, info_n = env.step(action_n)
@@ -140,6 +142,7 @@ def train(arglist):
                 obs_n = env.reset()
                 episode_step = 0
                 episode_rewards.append(0)
+                glog.info("episode: %d", (len(episode_rewards)))
                 for a in agent_rewards:
                     a.append(0)
                 agent_info.append([[]])
