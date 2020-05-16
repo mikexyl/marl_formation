@@ -1,6 +1,7 @@
 import multiagent.environment as maenv
 import numpy as np
 
+
 # override ma.env, mainly for rendering
 class MultiAgentEnv(maenv.MultiAgentEnv):
     def __init__(self, world, reset_callback=None, reward_callback=None,
@@ -10,22 +11,23 @@ class MultiAgentEnv(maenv.MultiAgentEnv):
                                             info_callback,
                                             done_callback, shared_viewer)
 
-        #reset discreate action params
-        self.discrete_action_space=False
-        self.discrete_action_input=False
-        self.force_discrete_action=False
+        # reset discreate action params
+        self.discrete_action_space = False
+        self.discrete_action_input = False
+        self.force_discrete_action = False
 
-        #reset action space
+        # reset action space
         from gym import spaces
         from multiagent.multi_discrete import MultiDiscrete
-        self.action_space=[]
+        self.action_space = []
         for agent in self.agents:
             total_action_space = []
             # physical action space
             if self.discrete_action_space:
                 u_action_space = spaces.Discrete(world.dim_p * 2 + 1)
             else:
-                u_action_space = spaces.Box(low=-agent.u_range, high=+agent.u_range, shape=(world.dim_p,), dtype=np.float32)
+                u_action_space = spaces.Box(low=-agent.u_range, high=+agent.u_range, shape=(world.dim_p,),
+                                            dtype=np.float32)
             if agent.movable:
                 total_action_space.append(u_action_space)
             # communication action space
@@ -116,11 +118,13 @@ class MultiAgentEnv(maenv.MultiAgentEnv):
 
         return results
 
+    # todo no need to copy entire
     def _set_action(self, action, agent, action_space, time=None):
         agent.action.u = np.zeros(self.world.dim_p)
         agent.action.c = np.zeros(self.world.dim_c)
         # process action
         from multiagent.multi_discrete import MultiDiscrete
+        from gym import spaces
         if isinstance(action_space, MultiDiscrete):
             act = []
             size = action_space.high - action_space.low + 1
@@ -129,9 +133,21 @@ class MultiAgentEnv(maenv.MultiAgentEnv):
                 act.append(action[index:(index + s)])
                 index += s
             action = act
+        elif isinstance(action_space, spaces.Box):
+            # todo this looks terrible
+            if action[0] < action_space.low[0]:
+                action[0] = action_space.low[0]
+            elif action[0] > action_space.high[0]:
+                action[0] = action_space.high[0]
+
+            if action[1] < action_space.low[1]:
+                action[1] = action_space.low[1]
+            elif action[1] > action_space.high[1]:
+                action[1] = action_space.high[1]
         else:
             action = [action]
 
+        # todo what's the origin structure of action? how does it be deleted all?
         if agent.movable:
             # physical action
             if self.discrete_action_input:
@@ -148,13 +164,13 @@ class MultiAgentEnv(maenv.MultiAgentEnv):
             else:
                 if self.force_discrete_action:
                     d = np.argmax(action[0])
-                    action[0][:] = 0.0
-                    action[0][d] = 1.0
+                    agent.action.u[0] += action[0][1] - action[0][2]
+                    agent.action.u[1] += action[0][3] - action[0][4]
                 if self.discrete_action_space:
                     agent.action.u[0] += action[0][0]
                     agent.action.u[1] += action[0][1]
                 else:
-                    agent.action.u = action[0]
+                    agent.action.u = action
             sensitivity = 5.0
             if agent.accel is not None:
                 sensitivity = agent.accel
@@ -168,5 +184,7 @@ class MultiAgentEnv(maenv.MultiAgentEnv):
             else:
                 agent.action.c = action[0]
             action = action[1:]
-        # make sure we used all elements of action
+        else:
+            action = action[1:]
+            # make sure we used all elements of action
         assert len(action) == 0

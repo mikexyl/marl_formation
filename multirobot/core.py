@@ -68,6 +68,7 @@ class World(macore.World):
         self.vehicles = []
         self.goal_landmark = []
         # square world now, only size x is used
+        # todo world size should be a gym.spaces.Box?
         self.size_x = 5
         self.size_y = 5
         self.num_agents = 0
