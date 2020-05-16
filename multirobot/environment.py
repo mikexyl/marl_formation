@@ -11,22 +11,9 @@ class MultiAgentEnv(maenv.MultiAgentEnv):
                                             info_callback,
                                             done_callback, shared_viewer)
 
+
     # override to show the entire environment
     def render(self, mode='human'):
-        if mode == 'human':
-            alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
-            message = ''
-            for agent in self.world.agents:
-                comm = []
-                for other in self.world.agents:
-                    if other is agent: continue
-                    if np.all(other.state.c == 0):
-                        word = '_'
-                    else:
-                        word = alphabet[np.argmax(other.state.c)]
-                    message += (other.name + ' to ' + agent.name + ': ' + word + '   ')
-            print(message)
-
         for i in range(len(self.viewers)):
             # create viewers (if necessary)
             if self.viewers[i] is None:
@@ -56,9 +43,9 @@ class MultiAgentEnv(maenv.MultiAgentEnv):
 
             # render fov of vehicles
             for vehicle in self.world.vehicles:
-                geom = mrrendering.make_sector(vehicle.state.p_ang, vehicle.fov_ang, vehicle.fov_dist)
+                geom = mrrendering.make_fov(vehicle.state.p_ang, vehicle.fov, 30)
                 xform = rendering.Transform()
-                geom.set_color(*vehicle.color)
+                geom.set_color(*vehicle.color, alpha=0.5)
                 geom.add_attr(xform)
                 self.render_geoms.append(geom)
                 self.render_geoms_xform.append(xform)
@@ -73,7 +60,6 @@ class MultiAgentEnv(maenv.MultiAgentEnv):
         for i in range(len(self.viewers)):
             # update bounds to center around agent
             if self.shared_viewer:
-                pos = np.array([self.world.size_x / 2, self.world.size_y / 2])
                 self.viewers[i].set_bounds(-self.world.size_x - 1, self.world.size_x + 1, -self.world.size_y - 1,
                                            self.world.size_y + 1)
             else:
@@ -116,10 +102,14 @@ class MultiAgentEnv(maenv.MultiAgentEnv):
             if self.discrete_action_input:
                 agent.action.u = np.zeros(self.world.dim_p)
                 # process discrete action
-                if action[0] == 1: agent.action.u[0] = -1.0
-                if action[0] == 2: agent.action.u[0] = +1.0
-                if action[0] == 3: agent.action.u[1] = -1.0
-                if action[0] == 4: agent.action.u[1] = +1.0
+                if action[0] == 1:
+                    agent.action.u[0] = -1.0
+                if action[0] == 2:
+                    agent.action.u[0] = +1.0
+                if action[0] == 3:
+                    agent.action.u[1] = -1.0
+                if action[0] == 4:
+                    agent.action.u[1] = +1.0
             else:
                 if self.force_discrete_action:
                     d = np.argmax(action[0])

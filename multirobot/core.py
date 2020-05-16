@@ -21,6 +21,13 @@ class VehicleBodySpeed(object):
         self.p_vel_ang = None
 
 
+class FovParams(object):
+    def __init__(self, ang=2 / 3 * math.pi, dist=np.array([0.5,2.5]), res=np.array([10,10])):
+        self.dist=dist
+        self.ang=ang
+        # res[0] -> res of dist, res[1]-> res of ang
+        self.res=res
+
 class Vehicle(macore.Agent):
     def __init__(self):
         super(Vehicle, self).__init__()
@@ -31,10 +38,10 @@ class Vehicle(macore.Agent):
         self.action = VehicleAction()
         self.body_speed = VehicleBodySpeed()
         self.size = 0.5
-        self.fov_ang = 2 / 3 * math.pi
-        self.fov_dist = 3
         self.obs = None
         self.accel = 1
+
+        self.fov=FovParams()
 
     # a minimised vehicle model
     # todo a better model

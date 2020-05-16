@@ -83,7 +83,7 @@ class Scenario(BaseScenario):
     def reward(self, agent, world):
         return self.fc_reward(agent, world)
 
-    def fc_reward(self, agent, world, obs=np.zeros((10,10))):
+    def fc_reward(self, agent, world, obs=np.zeros((10, 10))):
         # 0 nothing
         # 1 obstacle
         # 2 vehicle
@@ -113,23 +113,26 @@ class Scenario(BaseScenario):
 
         # todo observe the goal
 
-        # convert to dist and angle
-        entity_in_fov = []
-        entity_pos = np.concatenate(entity_pos + other_agent_pos + other_vehicle_pos)
-        for i in range(0, len(entity_pos) // 2):
-            entity_pos_cur = entity_pos[i * 2: i * 2 + 2]
-            entity_dist_cur = np.linalg.norm(entity_pos_cur)
-            entity_ang_cur = math.atan2(entity_pos_cur[1], entity_pos_cur[0])
-            if entity_dist_cur <= agent.fov_dist and \
-                    (math.fabs(entity_ang_cur - agent.state.p_ang) <= agent.fov_ang / 2 or
-                     math.fabs(entity_ang_cur - agent.state.p_ang) <= agent.fov_ang / 2 + math.pi * 2):
-                entity_in_fov.append(np.array([entity_dist_cur, entity_ang_cur]))
-            else:
-                # todo how to deal with objects unseen
-                entity_in_fov.append(np.array([agent.fov_dist, 0]))
+        # # convert to dist and angle
+        # entity_in_fov = []
+        # entity_pos = np.concatenate(entity_pos + other_agent_pos + other_vehicle_pos)
+        # for i in range(0, len(entity_pos) // 2):
+        #     entity_pos_cur = entity_pos[i * 2: i * 2 + 2]
+        #     entity_dist_cur = np.linalg.norm(entity_pos_cur)
+        #     entity_ang_cur = math.atan2(entity_pos_cur[1], entity_pos_cur[0])
+        #     if agent.fov.dist[0] <= entity_dist_cur <= agent.fov.dist[1] and \
+        #             (math.fabs(entity_ang_cur - agent.state.p_ang) <= agent.fov.ang / 2 or
+        #              math.fabs(entity_ang_cur - agent.state.p_ang) <= agent.fov.ang / 2 + math.pi * 2):
+        #         entity_in_fov.append(np.array([entity_dist_cur, entity_ang_cur]))
+        #     else:
+        #         # todo how to deal with objects unseen
+        #         entity_in_fov.append(np.array([agent.fov_dist, 0]))
+        #
+        # agent.obs = entity_in_fov
+        # return entity_in_fov
 
-        agent.obs = entity_in_fov
-        return entity_in_fov
+        obs=np.zeros(agent.fov.res)
+        return obs
 
     def done(self, agent, world):
         if np.min(agent.obs) <= agent.size or \
