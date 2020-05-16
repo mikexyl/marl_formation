@@ -90,48 +90,50 @@ class Scenario(BaseScenario):
         # 3 goal
         return 0
 
+    @staticmethod
+    def cart_to_polar(pos):
+        polar = np.zeros(2)
+        polar[0] = np.linalg.norm(pos)
+        polar[1] = math.atan2(pos[1], pos[0]) + math.pi
+        return polar
+
+    @staticmethod
+    def find_grid_id(agent, entity_polar):
+        i = None
+        j = None
+        if agent.fov.dist[0] < entity_polar[0] < agent.fov.dist[1] and \
+                math.fabs(entity_polar[1] - agent.state.p_ang) < agent.fov.ang / 2:
+            i = math.floor((entity_polar[0] - agent.fov.dist[0]) / agent.fov.dist_res)
+            j = math.floor((entity_polar[1] - (agent.state.p_ang - agent.fov.ang / 2)) / agent.fov.ang_res)
+        return i, j
+
+    def add_to_obs_grid(self, agent, entity, obs, label):
+        entity_pos = entity.state.p_pos - agent.state.p_pos
+        entity_polar = self.cart_to_polar(entity_pos)
+        [i, j] = self.find_grid_id(agent, entity_polar)
+        if i is not None and j is not None:
+            obs[i, j] = label
+        return obs
+
     def observation(self, agent, world):
-        # todo need a form of observation
+        # print(agent.name, agent.state.p_ang)
+        obs = np.zeros(agent.fov.res)
         # get positions of all entities in this agent's reference frame
-        entity_pos = []
         for entity in world.landmarks:
-            entity_pos.append(entity.state.p_pos - agent.state.p_pos)
-        # entity colors
-        entity_color = []
-        for entity in world.landmarks:
-            entity_color.append(entity.color)
+            obs = self.add_to_obs_grid(agent, entity, obs, 1)
         # communication of all other agents
-        other_agent_pos = []
         for other in world.agents:
-            if other is agent: continue
-            other_agent_pos.append(other.state.p_pos - agent.state.p_pos)
+            if other is agent:
+                continue
+            obs = self.add_to_obs_grid(agent, other, obs, 2)
         # observe other vehicles
-        other_vehicle_pos = []
         for other in world.vehicles:
-            if other is agent: continue
-            other_vehicle_pos.append(other.state.p_pos - agent.state.p_pos)
-
+            if other is agent:
+                continue
+            obs = self.add_to_obs_grid(agent, other, obs, 3)
         # todo observe the goal
+        obs = self.add_to_obs_grid(agent, world.goal_landmark, obs, 4)
 
-        # # convert to dist and angle
-        # entity_in_fov = []
-        # entity_pos = np.concatenate(entity_pos + other_agent_pos + other_vehicle_pos)
-        # for i in range(0, len(entity_pos) // 2):
-        #     entity_pos_cur = entity_pos[i * 2: i * 2 + 2]
-        #     entity_dist_cur = np.linalg.norm(entity_pos_cur)
-        #     entity_ang_cur = math.atan2(entity_pos_cur[1], entity_pos_cur[0])
-        #     if agent.fov.dist[0] <= entity_dist_cur <= agent.fov.dist[1] and \
-        #             (math.fabs(entity_ang_cur - agent.state.p_ang) <= agent.fov.ang / 2 or
-        #              math.fabs(entity_ang_cur - agent.state.p_ang) <= agent.fov.ang / 2 + math.pi * 2):
-        #         entity_in_fov.append(np.array([entity_dist_cur, entity_ang_cur]))
-        #     else:
-        #         # todo how to deal with objects unseen
-        #         entity_in_fov.append(np.array([agent.fov_dist, 0]))
-        #
-        # agent.obs = entity_in_fov
-        # return entity_in_fov
-
-        obs=np.zeros(agent.fov.res)
         return obs
 
     def done(self, agent, world):

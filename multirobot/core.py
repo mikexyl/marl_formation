@@ -22,18 +22,21 @@ class VehicleBodySpeed(object):
 
 
 class FovParams(object):
-    def __init__(self, ang=2 / 3 * math.pi, dist=np.array([0.5,2.5]), res=np.array([10,10])):
-        self.dist=dist
-        self.ang=ang
+    def __init__(self, ang=2 / 3 * math.pi, dist=np.array([0.5, 2.5]), res=np.array([10, 10])):
+        self.dist = dist
+        self.ang = ang
         # res[0] -> res of dist, res[1]-> res of ang
-        self.res=res
+        self.res = res
+        self.dist_res = (dist[1] - dist[0]) / res[0]
+        self.ang_res = ang / res[1]
+
 
 class Vehicle(macore.Agent):
     def __init__(self):
         super(Vehicle, self).__init__()
         self.max_vel_x = 1
         self.max_vel_y = 1
-        self.max_vel_ang = math.pi / 2
+        self.max_vel_ang = math.pi / 4
         self.state = VehicleState()
         self.action = VehicleAction()
         self.body_speed = VehicleBodySpeed()
@@ -41,13 +44,14 @@ class Vehicle(macore.Agent):
         self.obs = None
         self.accel = 1
 
-        self.fov=FovParams()
+        self.fov = FovParams()
 
     # a minimised vehicle model
     # todo a better model
     def move(self, dt):
         if self.movable:
-            self.state.p_ang += (self.body_speed.p_vel_ang * dt) % (math.pi * 2)
+            self.state.p_ang += (self.body_speed.p_vel_ang * dt)
+            self.state.p_ang %= (math.pi * 2)
             self.state.p_vel = self.body_speed.p_vel_lin \
                 .dot(np.array([(math.cos(self.state.p_ang), math.sin(self.state.p_ang)),
                                (math.sin(self.state.p_ang), math.cos(self.state.p_ang))]))

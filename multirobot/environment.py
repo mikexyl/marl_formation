@@ -43,7 +43,7 @@ class MultiAgentEnv(maenv.MultiAgentEnv):
 
             # render fov of vehicles
             for vehicle in self.world.vehicles:
-                geom = mrrendering.make_fov(vehicle.state.p_ang, vehicle.fov, 30)
+                geom = mrrendering.make_fov(vehicle.fov, 30)
                 xform = rendering.Transform()
                 geom.set_color(*vehicle.color, alpha=0.5)
                 geom.add_attr(xform)
@@ -75,6 +75,7 @@ class MultiAgentEnv(maenv.MultiAgentEnv):
             e = len(self.world.entities)
             for v, vehicle in enumerate(self.world.vehicles):
                 self.render_geoms_xform[e + v].set_translation(*vehicle.state.p_pos)
+                self.render_geoms_xform[e + v].set_rotation(vehicle.state.p_ang)
 
             # render to display or array
             results.append(self.viewers[i].render(return_rgb_array=mode == 'rgb_array'))

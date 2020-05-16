@@ -30,7 +30,7 @@ if __name__ == '__main__':
         for i in range(env.n):
             # act_n.append(policy.action(obs_n[i]))
             # let it do nothing
-            act_n.append(np.array([-1, -1]))
+            act_n.append(np.array([-0.4, -1]))
         # step environment
         obs_n, reward_n, done_n, _ = env.step(act_n)
         # render all agent views
