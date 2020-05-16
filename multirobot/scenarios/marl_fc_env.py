@@ -1,6 +1,5 @@
 import math
 
-import glog
 import numpy as np
 from multiagent.core import Landmark
 from multiagent.scenario import BaseScenario
@@ -25,7 +24,7 @@ class Scenario(BaseScenario):
         for i, vehicle in enumerate(world.vehicles):
             vehicle.name = 'vehicle %d' % i
             vehicle.collide = False
-            vehicle.silent = False
+            vehicle.silent = True
             vehicle.size = 0.15
             if i == 0:
                 vehicle.color = np.array([1, 0, 0])
@@ -146,12 +145,13 @@ class Scenario(BaseScenario):
         # todo observe the goal
         obs = self.add_to_obs_grid(agent, world.goal_landmark, obs, 4)
 
-        return obs
+        return obs.reshape((100))
 
     def done(self, agent, world):
-        if np.min(agent.obs) <= agent.size or \
-                agent.state.p_pos[0] < 0 or agent.state.p_pos[1] < 0 or \
-                agent.state.p_pos[0] > world.size_x or agent.state.p_pos[1] > world.size_y:
+        if not (0 <= agent.state.p_pos[0] <= world.size_x and
+                0 <= agent.state.p_pos[1] <= world.size_y):
             return True
-        else:
-            return False
+        for entity in world.entities:
+            if np.linalg.norm(entity.state.p_pos - agent.state.p_pos) <= entity.size + agent.size:
+                return True
+        return False

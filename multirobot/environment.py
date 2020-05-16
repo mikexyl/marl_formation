@@ -1,7 +1,6 @@
 import multiagent.environment as maenv
 import numpy as np
 
-
 # override ma.env, mainly for rendering
 class MultiAgentEnv(maenv.MultiAgentEnv):
     def __init__(self, world, reset_callback=None, reward_callback=None,
@@ -11,6 +10,41 @@ class MultiAgentEnv(maenv.MultiAgentEnv):
                                             info_callback,
                                             done_callback, shared_viewer)
 
+        #reset discreate action params
+        self.discrete_action_space=False
+        self.discrete_action_input=False
+        self.force_discrete_action=False
+
+        #reset action space
+        from gym import spaces
+        from multiagent.multi_discrete import MultiDiscrete
+        self.action_space=[]
+        for agent in self.agents:
+            total_action_space = []
+            # physical action space
+            if self.discrete_action_space:
+                u_action_space = spaces.Discrete(world.dim_p * 2 + 1)
+            else:
+                u_action_space = spaces.Box(low=-agent.u_range, high=+agent.u_range, shape=(world.dim_p,), dtype=np.float32)
+            if agent.movable:
+                total_action_space.append(u_action_space)
+            # communication action space
+            if self.discrete_action_space:
+                c_action_space = spaces.Discrete(world.dim_c)
+            else:
+                c_action_space = spaces.Box(low=0.0, high=1.0, shape=(world.dim_c,), dtype=np.float32)
+            if not agent.silent:
+                total_action_space.append(c_action_space)
+            # total action space
+            if len(total_action_space) > 1:
+                # all action spaces are discrete, so simplify to MultiDiscrete action space
+                if all([isinstance(act_space, spaces.Discrete) for act_space in total_action_space]):
+                    act_space = MultiDiscrete([[0, act_space.n - 1] for act_space in total_action_space])
+                else:
+                    act_space = spaces.Tuple(total_action_space)
+                self.action_space.append(act_space)
+            else:
+                self.action_space.append(total_action_space[0])
 
     # override to show the entire environment
     def render(self, mode='human'):
