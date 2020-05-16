@@ -1,5 +1,6 @@
 import math
 
+import glog
 import numpy as np
 from multiagent.core import Landmark
 from multiagent.scenario import BaseScenario
@@ -28,6 +29,10 @@ class Scenario(BaseScenario):
             vehicle.size = 0.15
             if i == 0:
                 vehicle.color = np.array([1, 0, 0])
+            elif i == 1:
+                vehicle.color = np.array([0, 1, 0])
+            elif i == 2:
+                vehicle.color = np.array([0, 1, 1])
             else:
                 vehicle.color = np.random.uniform(0, 1, world.dim_color)
 
@@ -68,8 +73,9 @@ class Scenario(BaseScenario):
     def reset_world(self, world):
         self.reset_vehicles(world)
 
-    def reset_vehicles(self, world):
-        # start point set as controid at (1.5,1.5)
+    @staticmethod
+    def reset_vehicles(world):
+        # start point set as centroid at (1.5,1.5)
         # todo make it an option to choose start point
         radius = np.array([0, world.radius])
         alpha = math.pi * 2 / world.num_vehicles
@@ -94,7 +100,9 @@ class Scenario(BaseScenario):
     def cart_to_polar(pos):
         polar = np.zeros(2)
         polar[0] = np.linalg.norm(pos)
-        polar[1] = math.atan2(pos[1], pos[0]) + math.pi
+        polar[1] = math.atan2(pos[1], pos[0])
+        # map output of atan2 to [0,2pi]
+        polar[1] = -polar[1] + math.pi if polar[1] < 0 else polar[1]
         return polar
 
     @staticmethod
@@ -113,9 +121,13 @@ class Scenario(BaseScenario):
         [i, j] = self.find_grid_id(agent, entity_polar)
         if i is not None and j is not None:
             obs[i, j] = label
+            # glog.info([i, j, label])
         return obs
 
     def observation(self, agent, world):
+
+        # glog.info("obs of " + agent.name)
+
         # print(agent.name, agent.state.p_ang)
         obs = np.zeros(agent.fov.res)
         # get positions of all entities in this agent's reference frame
