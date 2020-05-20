@@ -3,6 +3,8 @@ import math
 import multiagent.core as macore
 import numpy as np
 
+from formation.maintainer import Maintainer
+
 
 class VehicleState(macore.AgentState):
     def __init__(self):
@@ -47,8 +49,8 @@ class Vehicle(macore.Agent):
         self.accel = 1
 
         self.fov = FovParams()
-        self.vehicles_obs=None
-        self.goal_obs=False
+        self.vehicles_obs = None
+        self.goal_obs = False
 
     # a minimised vehicle model
     # todo a better model
@@ -80,6 +82,10 @@ class World(macore.World):
         self.centroid = np.array([-3.5, -3.5])
         self.radius = 1
 
+        # formation init
+        # todo put it here since it need to reset when step
+        self.form_maintainer = Maintainer()
+
     # override, return all vehicles
     @property
     def policy_agents(self):
@@ -102,6 +108,8 @@ class World(macore.World):
         self.apply_action_speed()
         for i, vehicle in enumerate(self.vehicles):
             self.update_agent_state(vehicle)
+
+        self.form_maintainer.reset()
 
     # apply body speed actions
     def apply_action_speed(self):
