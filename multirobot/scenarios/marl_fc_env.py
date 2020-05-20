@@ -76,6 +76,10 @@ class Scenario(BaseScenario):
         world.num_vehicles = num_vehicles
         num_landmarks = 16
 
+        # init formation
+        world.form_maintainer.set_num_vehicles(num_vehicles)
+        world.form_maintainer.load_sample_formation()
+
         world.landmarks = [Landmark() for i in range(num_landmarks)]
         for i, landmark in enumerate(world.landmarks):
             landmark.name = 'landmark %d' % i
@@ -122,7 +126,6 @@ class Scenario(BaseScenario):
             else:
                 vehicle.color = np.random.uniform(0, 1, world.dim_color)
 
-        world.form_maintainer.set_num_vehicles(num_vehicles)
         self.reset_world(world)
         return world
 
@@ -167,10 +170,17 @@ class Scenario(BaseScenario):
         # 2 agents
         # 3 goal
         # 4~4+n vehicles
-        if len(agent.vehicles_obs) > 2:
+        # info("%s, vehicle_obs len: %d" % (agent.name, len(agent.vehicles_obs)))
+        if len(agent.vehicles_obs) > 1:
             world.form_maintainer.add_edges(
                 [(agent.id, vehicle_obs, distance_entities(agent, world.vehicles[vehicle_obs])) for vehicle_obs in
                  agent.vehicles_obs])
+            for i in range(len(agent.vehicles_obs)):
+                for j in range(i + 1, len(agent.vehicles_obs)):
+                    world.form_maintainer.add_edges(
+                        [(agent.vehicles_obs[i], agent.vehicles_obs[j],
+                          distance_entities(world.vehicles[agent.vehicles_obs[i]],
+                                            world.vehicles[agent.vehicles_obs[j]]))])
         displace, formed = world.form_maintainer.formation_exam()
         if formed:
             return True, self.rew_edge
