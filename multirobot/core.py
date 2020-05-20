@@ -34,6 +34,8 @@ class FovParams(object):
 class Vehicle(macore.Agent):
     def __init__(self):
         super(Vehicle, self).__init__()
+        self.id = 0
+
         self.max_vel_x = 1
         self.max_vel_y = 1
         self.max_vel_ang = math.pi / 4
@@ -45,6 +47,8 @@ class Vehicle(macore.Agent):
         self.accel = 1
 
         self.fov = FovParams()
+        self.vehicles_obs=None
+        self.goal_obs=False
 
     # a minimised vehicle model
     # todo a better model
@@ -85,6 +89,11 @@ class World(macore.World):
     @property
     def entities(self):
         return super(World, self).entities + [self.goal_landmark] + self.vehicles
+
+    # entities except vehicles
+    @property
+    def env_entities(self):
+        return super(World, self).entities + [self.goal_landmark]
 
     def step(self):
         super(World, self).step()

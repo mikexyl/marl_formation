@@ -136,15 +136,15 @@ class MultiAgentEnv(maenv.MultiAgentEnv):
         elif isinstance(action_space, spaces.Box):
             # todo this looks terrible
 
-            # if action[0] < action_space.low[0]:
-            #     action[0] = action_space.low[0]
-            # elif action[0] > action_space.high[0]:
-            #     action[0] = action_space.high[0]
-            #
-            # if action[1] < action_space.low[1]:
-            #     action[1] = action_space.low[1]
-            # elif action[1] > action_space.high[1]:
-            #     action[1] = action_space.high[1]
+            if action[0] < action_space.low[0]:
+                action[0] = action_space.low[0]
+            elif action[0] > action_space.high[0]:
+                action[0] = action_space.high[0]
+
+            if action[1] < action_space.low[1]:
+                action[1] = action_space.low[1]
+            elif action[1] > action_space.high[1]:
+                action[1] = action_space.high[1]
             action = [action]
         else:
             action = [action]

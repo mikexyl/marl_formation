@@ -4,6 +4,7 @@ import numpy as np
 from multiagent.core import Landmark
 from multiagent.scenario import BaseScenario
 
+from formation.maintainer import Maintainer
 from multirobot.core import World, Vehicle
 
 
@@ -19,21 +20,6 @@ class Scenario(BaseScenario):
         world.num_agents = num_agents
         world.num_vehicles = num_vehicles
         num_landmarks = 16
-
-        world.vehicles = [Vehicle() for i in range(num_vehicles)]
-        for i, vehicle in enumerate(world.vehicles):
-            vehicle.name = 'vehicle %d' % i
-            vehicle.collide = False
-            vehicle.silent = True
-            vehicle.size = 0.15
-            if i == 0:
-                vehicle.color = np.array([1, 0, 0])
-            elif i == 1:
-                vehicle.color = np.array([0, 1, 0])
-            elif i == 2:
-                vehicle.color = np.array([0, 1, 1])
-            else:
-                vehicle.color = np.random.uniform(0, 1, world.dim_color)
 
         world.landmarks = [Landmark() for i in range(num_landmarks)]
         for i, landmark in enumerate(world.landmarks):
@@ -65,6 +51,24 @@ class Scenario(BaseScenario):
         for vehicle in world.vehicles:
             vehicle.goal_a = world.goal_landmark
 
+        world.vehicles = [Vehicle() for i in range(num_vehicles)]
+        for i, vehicle in enumerate(world.vehicles):
+            vehicle.name = 'vehicle %d' % i
+            vehicle.collide = False
+            vehicle.silent = True
+            vehicle.size = 0.15
+            if i == 0:
+                vehicle.color = np.array([1, 0, 0])
+            elif i == 1:
+                vehicle.color = np.array([0, 1, 0])
+            elif i == 2:
+                vehicle.color = np.array([0, 1, 1])
+            else:
+                vehicle.color = np.random.uniform(0, 1, world.dim_color)
+
+        # formation init
+        form_maintainer = Maintainer(num_vehicles)
+
         self.reset_world(world)
         return world
 
@@ -86,13 +90,20 @@ class Scenario(BaseScenario):
             vehicle.state.c = np.zeros(world.dim_c)
 
     def reward(self, agent, world):
-        return self.fc_reward(agent, world)
+        return self.formation_reward(agent, world)
 
-    def fc_reward(self, agent, world, obs=np.zeros((10, 10))):
+    def formation_reward(self, agent, world):
         # 0 nothing
         # 1 obstacle
-        # 2 vehicle
+        # 2 agents
         # 3 goal
+        # 4~4+n vehicles
+        return 0
+
+    def success_reward(self, agent, world):
+        return 0
+
+    def collision_reward(self, agent, world):
         return 0
 
     @staticmethod
@@ -115,19 +126,22 @@ class Scenario(BaseScenario):
         return i, j
 
     def add_to_obs_grid(self, agent, entity, obs, label):
+        observed = False
         entity_pos = entity.state.p_pos - agent.state.p_pos
         entity_polar = self.cart_to_polar(entity_pos)
         [i, j] = self.find_grid_id(agent, entity_polar)
         if i is not None and j is not None:
             obs[i, j] = label
+            observed = True
             # glog.info([i, j, label])
-        return obs
+        return obs, observed
 
     def observation(self, agent, world):
-
         # glog.info("obs of " + agent.name)
 
         # print(agent.name, agent.state.p_ang)
+        agent.goal_obs = False
+        agent.vehicles_obs = []
         obs = np.zeros(agent.fov.res)
         # get positions of all entities in this agent's reference frame
         for entity in world.landmarks:
@@ -137,15 +151,19 @@ class Scenario(BaseScenario):
             if other is agent:
                 continue
             obs = self.add_to_obs_grid(agent, other, obs, 2)
+        # todo observe the goal
+        obs, observed = self.add_to_obs_grid(agent, world.goal_landmark, obs, 3)
+        if observed:
+            agent.goal_obs = True
         # observe other vehicles
-        for other in world.vehicles:
+        for i, other in enumerate(world.vehicles):
             if other is agent:
                 continue
-            obs = self.add_to_obs_grid(agent, other, obs, 3)
-        # todo observe the goal
-        obs = self.add_to_obs_grid(agent, world.goal_landmark, obs, 4)
+            obs, observed = self.add_to_obs_grid(agent, other, obs, i + 4)
+            if observed:
+                agent.vehicles_obs.append(i)
 
-        return obs.reshape((100))
+        return obs.reshape(100)
 
     def done(self, agent, world):
         if not (0 <= agent.state.p_pos[0] <= world.size_x and
