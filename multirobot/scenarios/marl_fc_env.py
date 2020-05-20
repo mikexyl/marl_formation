@@ -41,7 +41,7 @@ def find_grid_id(agent, entity_polar):
 
 def collision_check(agent, world):
     for entity in world.entities:
-        if distance_entities(agent, entity) <= entity.size + agent.size:
+        if entity is not agent and distance_entities(agent, entity) <= entity.size + agent.size:
             return True
     return False
 
@@ -190,6 +190,7 @@ class Scenario(BaseScenario):
     def appr_reward(self, agent, world):
         return 0
 
+    # todo now it's success if observed
     def success_reward(self, agent, world):
         if agent.goal_obs:
             return True, self.rew_success

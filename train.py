@@ -58,9 +58,6 @@ def make_env(scenario_name, arglist, benchmark=False):
     from multirobot.environment import MultiAgentEnv
     import multirobot.scenarios as scenarios
 
-    # from multiagent.environment import MultiAgentEnv
-    # import multiagent.scenarios as scenarios
-
     # load scenario from script
     scenario = scenarios.load(scenario_name + ".py").Scenario()
     # create world
@@ -139,10 +136,10 @@ def train(arglist):
                 agent_rewards[i][-1] += rew
 
             if done or terminal:
+                glog.info("episode: %d, episode reward: %5.2f" % ((len(episode_rewards)), episode_rewards[-1]))
                 obs_n = env.reset()
                 episode_step = 0
                 episode_rewards.append(0)
-                glog.info("episode: %d", (len(episode_rewards)))
                 for a in agent_rewards:
                     a.append(0)
                 agent_info.append([[]])

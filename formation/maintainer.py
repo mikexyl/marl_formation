@@ -12,8 +12,8 @@ class Maintainer(object):
         self.n = None
 
     def set_num_vehicles(self, num_vehicles):
-        self.t_formation = Graph(num_vehicles, directed=False)
-        self.c_formation = Graph(num_vehicles, directed=False)
+        self.t_formation = Graph(num_vehicles)
+        self.c_formation = Graph(num_vehicles)
         self.n = num_vehicles
 
     def assign(self):
@@ -40,15 +40,16 @@ class Maintainer(object):
 
     def add_edges(self, es):
         for edge in es:
+            # info("added: %d, %d" % (edge[0], edge[1]))
             self.c_formation.add_edge(edge[0], edge[1], weight=edge[2])
 
     def reset(self):
-        self.c_formation.delete_edges(None)
+        self.c_formation.delete_edges()
 
     # todo consider stability
     def formation_exam(self):
-        info("current graph size: %d" % len(self.c_formation.es))
-        if len(self.c_formation.es) < (2 * self.n - 3):
+        # info("current graph size: %d" % self.c_formation.size())
+        if self.c_formation.size() < (2 * self.n - 3):
             return 0, False
         else:
             return 0, False
