@@ -41,6 +41,9 @@ def parse_args():
                         help="directory where benchmark data is saved")
     parser.add_argument("--plots-dir", type=str, default="./learning_curves/",
                         help="directory where plot data is saved")
+
+    parser.add_argument("--debug-display", action="store_true", default=False)
+
     return parser.parse_args()
 
 
@@ -135,8 +138,7 @@ def train(arglist):
                 episode_rewards[-1] += rew
                 agent_rewards[i][-1] += rew
 
-            # if __debug__:
-            #     env.render()
+            env.render()
 
             if done or terminal:
                 # glog.info("episode: %d, episode reward: %5.2f" % ((len(episode_rewards)), episode_rewards[-1]))
@@ -167,6 +169,9 @@ def train(arglist):
                 time.sleep(0.1)
                 env.render()
                 continue
+
+            if arglist.debug_display:
+                env.render()
 
             # update all trainers, if not in display or benchmark mode
             loss = None

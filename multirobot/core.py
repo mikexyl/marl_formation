@@ -4,6 +4,7 @@ import multiagent.core as macore
 import numpy as np
 
 from formation.maintainer import Maintainer
+from multirobot import util
 
 
 class VehicleState(macore.AgentState):
@@ -52,16 +53,32 @@ class Vehicle(macore.Agent):
         self.vehicles_obs = None
         self.goal_obs = False
 
+        self.is_stuck = False
+
     # a minimised vehicle model
     # todo a better model
-    def move(self, dt):
+    def premove(self, dt):
+        t_ang = None
+        t_pos = None
+        t_vel = None
         if self.movable:
-            self.state.p_ang += (self.body_speed.p_vel_ang * dt)
-            self.state.p_ang %= (math.pi * 2)
-            self.state.p_vel = self.body_speed.p_vel_lin \
+            self.state.p_vel = np.zeros(2)
+            t_ang = self.state.p_ang + (self.body_speed.p_vel_ang * dt)
+            t_ang %= (math.pi * 2)
+            t_vel = self.body_speed.p_vel_lin \
                 .dot(np.array([(math.cos(self.state.p_ang), math.sin(self.state.p_ang)),
                                (math.sin(self.state.p_ang), math.cos(self.state.p_ang))]))
-            self.state.p_pos += self.state.p_vel * dt
+            t_pos = self.state.p_pos + t_vel * dt
+        return t_ang, t_pos, t_vel
+
+    def move_to(self, t_ang=None, t_pos=None, t_vel=None):
+        if t_vel is not None:
+            if t_ang is not None:
+                self.state.p_ang = t_ang
+            if t_pos is not None:
+                self.state.p_pos = t_pos
+            if t_pos is not None and t_ang is not None:
+                self.state.p_vel = t_vel
 
     def action_to_speed(self):
         self.body_speed.p_vel_lin = np.array([(self.action.u[0] + 1) * (self.max_vel_x / 2), 0])
@@ -102,7 +119,7 @@ class World(macore.World):
         return super(World, self).entities + [self.goal_landmark]
 
     def step(self):
-        super(World, self).step()
+        # super(World, self).step()
 
         # move vehicles
         self.apply_action_speed()
@@ -115,4 +132,10 @@ class World(macore.World):
     def apply_action_speed(self):
         for i, vehicle in enumerate(self.vehicles):
             vehicle.action_to_speed()
-            vehicle.move(self.dt)
+            t_ang, t_pos, t_vel = vehicle.premove(self.dt)
+            if not util.collision_check(vehicle, self, t_pos, vehicle.size):
+                vehicle.move_to(t_ang, t_pos, t_vel)
+                vehicle.is_stuck = False
+            else:
+                vehicle.move_to(t_ang, t_vel=t_vel)
+                vehicle.is_stuck = True

@@ -5,53 +5,8 @@ from glog import info
 from multiagent.core import Landmark
 from multiagent.scenario import BaseScenario
 
+from multirobot import util
 from multirobot.core import World, Vehicle
-
-
-def add_to_obs_grid(agent, entity, obs, label):
-    observed = False
-    entity_pos = entity.state.p_pos - agent.state.p_pos
-    entity_polar = cart_to_polar(entity_pos)
-    [i, j] = find_grid_id(agent, entity_polar)
-    if i is not None and j is not None:
-        obs[i, j] = label
-        observed = True
-        # glog.info([i, j, label])
-    return obs, observed
-
-
-# todo may need a util class for static methods
-def cart_to_polar(pos):
-    polar = np.zeros(2)
-    polar[0] = np.linalg.norm(pos)
-    polar[1] = math.atan2(pos[1], pos[0])
-    # map output of atan2 to [0,2pi]
-    polar[1] = -polar[1] + math.pi if polar[1] < 0 else polar[1]
-    return polar
-
-
-def find_grid_id(agent, entity_polar):
-    i = None
-    j = None
-    if agent.fov.dist[0] < entity_polar[0] < agent.fov.dist[1] and \
-            math.fabs(entity_polar[1] - agent.state.p_ang) < agent.fov.ang / 2:
-        i = math.floor((entity_polar[0] - agent.fov.dist[0]) / agent.fov.dist_res)
-        j = math.floor((entity_polar[1] - (agent.state.p_ang - agent.fov.ang / 2)) / agent.fov.ang_res)
-    return i, j
-
-
-def collision_check(agent, world):
-    if not (-world.size_x <= agent.state.p_pos[0] <= world.size_x and
-            -world.size_y <= agent.state.p_pos[1] <= world.size_y):
-        return True
-    for entity in world.entities:
-        if (entity is not agent) and distance_entities(agent, entity) <= entity.size + agent.size:
-            return True
-    return False
-
-
-def distance_entities(entity1, entity2):
-    return np.linalg.norm(entity1.state.p_pos - entity2.state.p_pos)
 
 
 class Benchmark(object):
@@ -78,7 +33,7 @@ class Scenario(BaseScenario):
         self.rew_edge = 0.1
         self.rew_success = 50
         self.rew_collision = -100
-        self.rew_penalty = 0.5
+        self.rew_penalty = -0.1
 
         self.benchmark = Benchmark()
 
@@ -87,20 +42,23 @@ class Scenario(BaseScenario):
 
         # set any world properties first
         world.dim_c = 2
-        num_vehicles = 1
+        num_vehicles = 3
         num_agents = 0
         world.num_agents = num_agents
         world.num_vehicles = num_vehicles
         num_landmarks = 16
+        res_wall = 30
+        num_walls = res_wall * 4
 
         # init formation
         world.form_maintainer.set_num_vehicles(num_vehicles)
         world.form_maintainer.load_sample_formation()
 
-        world.landmarks = [Landmark() for i in range(num_landmarks)]
-        for i, landmark in enumerate(world.landmarks):
+        world.landmarks = [Landmark() for i in range(num_landmarks + num_walls)]
+        for i in range(num_landmarks):
+            landmark = world.landmarks[i]
             landmark.name = 'landmark %d' % i
-            landmark.collide = False
+            landmark.collide = True
             landmark.movable = False
             landmark.size = 0.3
             while True:
@@ -114,6 +72,31 @@ class Scenario(BaseScenario):
                     break
             landmark.state.p_vel = np.zeros(world.dim_p)
             landmark.color = np.array([0, 0, 0])
+        for i in range(num_landmarks, num_landmarks + num_walls):
+            wall = world.landmarks[i]
+            wall.name = 'wall %d' % i
+            wall.collide = True
+            wall.movable = False
+            wall.state.p_vel = np.zeros(world.dim_p)
+            wall.color = np.array([0, 0, 0])
+            wall.size = (world.size_x * 2 + world.size_y * 2) / res_wall / 4
+
+        for n in range(res_wall):
+            info(num_landmarks + n)
+            world.landmarks[num_landmarks + n].state.p_pos = np.array(
+                [-world.size_x, -world.size_y + (2 * world.size_y) / res_wall * n])
+        for n in range(res_wall):
+            info(num_landmarks + n + res_wall)
+            world.landmarks[num_landmarks + n + res_wall].state.p_pos = np.array(
+                [-world.size_x + (2 * world.size_x) / res_wall * n, -world.size_y])
+        for n in range(res_wall):
+            info(num_landmarks + n + res_wall * 2)
+            world.landmarks[num_landmarks + n + res_wall * 2].state.p_pos = np.array(
+                [-world.size_x + (2 * world.size_x) / res_wall * n, world.size_y])
+        for n in range(res_wall):
+            info(num_landmarks + n + res_wall * 3)
+            world.landmarks[num_landmarks + n + res_wall * 3].state.p_pos = np.array(
+                [world.size_x, -world.size_y + (2 * world.size_y) / res_wall * n])
 
         world.goal_landmark = Landmark()
         world.goal_landmark.name = 'goal landmark'
@@ -197,14 +180,14 @@ class Scenario(BaseScenario):
         # info("%s, vehicle_obs len: %d" % (agent.name, len(agent.vehicles_obs)))
         if len(agent.vehicles_obs) > 1:
             world.form_maintainer.add_edges(
-                [(agent.id, vehicle_obs, distance_entities(agent, world.vehicles[vehicle_obs])) for vehicle_obs in
+                [(agent.id, vehicle_obs, util.distance_entities(agent, world.vehicles[vehicle_obs])) for vehicle_obs in
                  agent.vehicles_obs])
             for i in range(len(agent.vehicles_obs)):
                 for j in range(i + 1, len(agent.vehicles_obs)):
                     world.form_maintainer.add_edges(
                         [(agent.vehicles_obs[i], agent.vehicles_obs[j],
-                          distance_entities(world.vehicles[agent.vehicles_obs[i]],
-                                            world.vehicles[agent.vehicles_obs[j]]))])
+                          util.distance_entities(world.vehicles[agent.vehicles_obs[i]],
+                                                 world.vehicles[agent.vehicles_obs[j]]))])
         displace, formed = world.form_maintainer.formation_exam(self.eps_form)
         if formed:
             return True, self.rew_edge
@@ -222,7 +205,7 @@ class Scenario(BaseScenario):
             return False, 0
 
     def collision_reward(self, agent, world):
-        if collision_check(agent, world):
+        if util.collision_check(agent, world):
             return True, self.rew_collision
         return False, 0
 
@@ -235,21 +218,21 @@ class Scenario(BaseScenario):
         obs = np.zeros(agent.fov.res)
         # get positions of all entities in this agent's reference frame
         for entity in world.landmarks:
-            obs, _ = add_to_obs_grid(agent, entity, obs, 1)
+            obs, _ = util.add_to_obs_grid(agent, entity, obs, 1)
         # communication of all other agents
         for other in world.agents:
             if other is agent:
                 continue
-            obs, _ = add_to_obs_grid(agent, other, obs, 2)
+            obs, _ = util.add_to_obs_grid(agent, other, obs, 2)
         # todo observe the goal
-        obs, observed = add_to_obs_grid(agent, world.goal_landmark, obs, 3)
+        obs, observed = util.add_to_obs_grid(agent, world.goal_landmark, obs, 3)
         if observed:
             agent.goal_obs = True
         # observe other vehicles
         for i, other in enumerate(world.vehicles):
             if other is agent:
                 continue
-            obs, observed = add_to_obs_grid(agent, other, obs, agent.id + 4)
+            obs, observed = util.add_to_obs_grid(agent, other, obs, agent.id + 4)
             if observed:
                 agent.vehicles_obs.append(i)
 
@@ -259,7 +242,7 @@ class Scenario(BaseScenario):
         # check if succeed
         if agent.goal_obs:
             return True
-
+        return agent.is_stuck
         # todo collision not check here
         # check if collision
-        return collision_check(agent, world)
+        # return util.collision_check(agent, world)
