@@ -28,7 +28,7 @@ def parse_args():
     parser.add_argument("--exp-name", type=str, default=None, help="name of the experiment")
     parser.add_argument("--save-dir", type=str, default="/tmp/policy/",
                         help="directory in which training state and model should be saved")
-    parser.add_argument("--save-rate", type=int, default=1000,
+    parser.add_argument("--save-rate", type=int, default=100,
                         help="save model once every time this many episodes are completed")
     parser.add_argument("--load-dir", type=str, default="",
                         help="directory in which training state and model are loaded")
@@ -64,9 +64,9 @@ def make_env(scenario_name, arglist, benchmark=False):
     world = scenario.make_world()
     # create multiagent environment
     if benchmark:
-        env = MultiAgentEnv(world, scenario.reset_world, scenario.reward, scenario.observation, scenario.benchmark_data)
+        env = MultiAgentEnv(world, scenario.reset_world, scenario.reward, scenario.observation, scenario.benchmark_data, scenario.done, True)
     else:
-        env = MultiAgentEnv(world, scenario.reset_world, scenario.reward, scenario.observation)
+        env = MultiAgentEnv(world, scenario.reset_world, scenario.reward, scenario.observation, done_callback=scenario.done, shared_viewer=True)
     return env
 
 
@@ -135,8 +135,11 @@ def train(arglist):
                 episode_rewards[-1] += rew
                 agent_rewards[i][-1] += rew
 
+            # if __debug__:
+            #     env.render()
+
             if done or terminal:
-                glog.info("episode: %d, episode reward: %5.2f" % ((len(episode_rewards)), episode_rewards[-1]))
+                # glog.info("episode: %d, episode reward: %5.2f" % ((len(episode_rewards)), episode_rewards[-1]))
                 obs_n = env.reset()
                 episode_step = 0
                 episode_rewards.append(0)
@@ -173,7 +176,7 @@ def train(arglist):
                 loss = agent.update(trainers, train_step)
 
             # save model, display training output
-            if terminal and (len(episode_rewards) % arglist.save_rate == 0):
+            if (done or terminal) and (len(episode_rewards) % arglist.save_rate == 0):
                 U.save_state(arglist.save_dir, saver=saver)
                 # print statement depends on whether or not there are adversaries
                 if num_adversaries == 0:

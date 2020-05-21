@@ -40,7 +40,7 @@ class Vehicle(macore.Agent):
 
         self.max_vel_x = 1
         self.max_vel_y = 1
-        self.max_vel_ang = math.pi / 4
+        self.max_vel_ang = math.pi
         self.state = VehicleState()
         self.action = VehicleAction()
         self.body_speed = VehicleBodySpeed()
