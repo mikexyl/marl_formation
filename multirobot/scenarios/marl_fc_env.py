@@ -54,7 +54,7 @@ class Scenario(BaseScenario):
     def __init__(self):
         super(Scenario, self).__init__()
 
-        self.eps_form = 0.4
+        self.eps_form = 0.1
         self.eps_goal = 0.5
 
         self.rew_form_ratio = -1
@@ -63,7 +63,7 @@ class Scenario(BaseScenario):
         self.rew_edge = 0.1
         self.rew_success = 50
         self.rew_collision = -100
-        self.rew_penalty = 0.5
+        self.rew_penalty = -0.5
 
     def make_world(self):
         world = World()
@@ -181,7 +181,7 @@ class Scenario(BaseScenario):
                         [(agent.vehicles_obs[i], agent.vehicles_obs[j],
                           distance_entities(world.vehicles[agent.vehicles_obs[i]],
                                             world.vehicles[agent.vehicles_obs[j]]))])
-        displace, formed = world.form_maintainer.formation_exam()
+        displace, formed = world.form_maintainer.formation_exam(self.eps_form)
         if formed:
             return True, self.rew_edge
         else:
