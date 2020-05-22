@@ -22,13 +22,13 @@ def parse_args():
     # Core training parameters
     parser.add_argument("--lr", type=float, default=1e-2, help="learning rate for Adam optimizer")
     parser.add_argument("--gamma", type=float, default=0.95, help="discount factor")
-    parser.add_argument("--batch-size", type=int, default=1024, help="number of episodes to optimize at the same time")
+    parser.add_argument("--batch-size", type=int, default=2048, help="number of episodes to optimize at the same time")
     parser.add_argument("--num-units", type=int, default=64, help="number of units in the mlp")
     # Checkpointing
     parser.add_argument("--exp-name", type=str, default=None, help="name of the experiment")
     parser.add_argument("--save-dir", type=str, default="/tmp/policy/",
                         help="directory in which training state and model should be saved")
-    parser.add_argument("--save-rate", type=int, default=100,
+    parser.add_argument("--save-rate", type=int, default=20,
                         help="save model once every time this many episodes are completed")
     parser.add_argument("--load-dir", type=str, default="",
                         help="directory in which training state and model are loaded")
@@ -127,7 +127,7 @@ def train(arglist):
             # environment step
             new_obs_n, rew_n, done_n, info_n = env.step(action_n)
             episode_step += 1
-            done = any(done_n)
+            done = all(done_n)
             terminal = (episode_step >= arglist.max_episode_len)
             # collect experience
             for i, agent in enumerate(trainers):

@@ -33,7 +33,7 @@ class Scenario(BaseScenario):
         self.rew_edge = 0.1
         self.rew_success = 50
         self.rew_collision = -100
-        self.rew_penalty = -0.1
+        self.rew_penalty = 0
 
         self.benchmark = Benchmark()
 
@@ -42,7 +42,7 @@ class Scenario(BaseScenario):
 
         # set any world properties first
         world.dim_c = 2
-        num_vehicles = 3
+        num_vehicles = 1
         num_agents = 0
         world.num_agents = num_agents
         world.num_vehicles = num_vehicles
@@ -205,7 +205,7 @@ class Scenario(BaseScenario):
             return False, 0
 
     def collision_reward(self, agent, world):
-        if util.collision_check(agent, world):
+        if util.collision_check(agent, world) or agent.is_stuck:
             return True, self.rew_collision
         return False, 0
 
@@ -242,7 +242,9 @@ class Scenario(BaseScenario):
         # check if succeed
         if agent.goal_obs:
             return True
+        # return False
         return agent.is_stuck
+        # return util.collision_check(agent, world)
         # todo collision not check here
         # check if collision
         # return util.collision_check(agent, world)

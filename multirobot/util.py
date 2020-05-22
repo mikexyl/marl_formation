@@ -37,7 +37,6 @@ def find_grid_id(agent, entity_polar):
 
 
 def collision_check(agent, world, pos=None, size=None):
-    pos = None
     if pos is None:
         pos = agent.state.p_pos
     if size is None:
