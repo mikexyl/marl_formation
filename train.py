@@ -138,7 +138,7 @@ def train(arglist):
                 episode_rewards[-1] += rew
                 agent_rewards[i][-1] += rew
 
-            env.render()
+            # env.render()
 
             if done or terminal:
                 # glog.info("episode: %d, episode reward: %5.2f" % ((len(episode_rewards)), episode_rewards[-1]))

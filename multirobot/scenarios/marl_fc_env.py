@@ -33,7 +33,7 @@ class Scenario(BaseScenario):
         self.rew_edge = 0.1
         self.rew_success = 50
         self.rew_collision = -100
-        self.rew_penalty = 0
+        self.rew_penalty = -0.1
 
         self.benchmark = Benchmark()
 
