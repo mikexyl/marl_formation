@@ -26,11 +26,18 @@ def cart_to_polar(pos):
     return polar
 
 
+def in_fov_check(agent, entity_polar):
+    if agent.fov.dist[0] < entity_polar[0] < agent.fov.dist[1] and \
+            math.fabs(entity_polar[1] - agent.state.p_ang) < agent.fov.ang / 2:
+        return True
+    else:
+        return False
+
+
 def find_grid_id(agent, entity_polar):
     i = None
     j = None
-    if agent.fov.dist[0] < entity_polar[0] < agent.fov.dist[1] and \
-            math.fabs(entity_polar[1] - agent.state.p_ang) < agent.fov.ang / 2:
+    if in_fov_check(agent, entity_polar):
         i = math.floor((entity_polar[0] - agent.fov.dist[0]) / agent.fov.dist_res)
         j = math.floor((entity_polar[1] - (agent.state.p_ang - agent.fov.ang / 2)) / agent.fov.ang_res)
     return i, j

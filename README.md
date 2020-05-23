@@ -4,3 +4,4 @@
 3. need a method to generate target graph
 4. how to compare two unlabeled, weighted graph
 5. how to give scores to subgraph
+6. the environment obstacles positions generated randomly

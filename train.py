@@ -14,7 +14,7 @@ def parse_args():
     parser = argparse.ArgumentParser("Reinforcement Learning experiments for multiagent environments")
     # Environment
     parser.add_argument("--scenario", type=str, default="simple", help="name of the scenario script")
-    parser.add_argument("--max-episode-len", type=int, default=200, help="maximum episode length")
+    parser.add_argument("--max-episode-len", type=int, default=400, help="maximum episode length")
     parser.add_argument("--num-episodes", type=int, default=60000, help="number of episodes")
     parser.add_argument("--num-adversaries", type=int, default=0, help="number of adversaries")
     parser.add_argument("--good-policy", type=str, default="maddpg", help="policy for good agents")
@@ -138,7 +138,7 @@ def train(arglist):
                 episode_rewards[-1] += rew
                 agent_rewards[i][-1] += rew
 
-            # env.render()
+            env.render()
 
             if done or terminal:
                 # glog.info("episode: %d, episode reward: %5.2f" % ((len(episode_rewards)), episode_rewards[-1]))

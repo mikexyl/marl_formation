@@ -42,7 +42,7 @@ class Scenario(BaseScenario):
 
         # set any world properties first
         world.dim_c = 2
-        num_vehicles = 1
+        num_vehicles = 3
         num_agents = 0
         world.num_agents = num_agents
         world.num_vehicles = num_vehicles
@@ -178,6 +178,7 @@ class Scenario(BaseScenario):
         # 3 goal
         # 4~4+n vehicles
         # info("%s, vehicle_obs len: %d" % (agent.name, len(agent.vehicles_obs)))
+        # todo obs changed, formation not changed yet
         if len(agent.vehicles_obs) > 1:
             world.form_maintainer.add_edges(
                 [(agent.id, vehicle_obs, util.distance_entities(agent, world.vehicles[vehicle_obs])) for vehicle_obs in
@@ -215,28 +216,48 @@ class Scenario(BaseScenario):
         # print(agent.name, agent.state.p_ang)
         agent.goal_obs = False
         agent.vehicles_obs = []
-        obs = np.zeros(agent.fov.res)
-        # get positions of all entities in this agent's reference frame
-        for entity in world.landmarks:
-            obs, _ = util.add_to_obs_grid(agent, entity, obs, 1)
-        # communication of all other agents
-        for other in world.agents:
-            if other is agent:
-                continue
-            obs, _ = util.add_to_obs_grid(agent, other, obs, 2)
-        # todo observe the goal
-        obs, observed = util.add_to_obs_grid(agent, world.goal_landmark, obs, 3)
-        if observed:
-            agent.goal_obs = True
-        # observe other vehicles
-        for i, other in enumerate(world.vehicles):
-            if other is agent:
-                continue
-            obs, observed = util.add_to_obs_grid(agent, other, obs, agent.id + 4)
-            if observed:
-                agent.vehicles_obs.append(i)
 
-        return obs.reshape(100)
+        # obs = np.zeros(agent.fov.res)
+        # # get positions of all entities in this agent's reference frame
+        # for entity in world.landmarks:
+        #     obs, _ = util.add_to_obs_grid(agent, entity, obs, 1)
+        # # communication of all other agents
+        # for other in world.agents:
+        #     if other is agent:
+        #         continue
+        #     obs, _ = util.add_to_obs_grid(agent, other, obs, 2)
+        # # todo observe the goal
+        # obs, observed = util.add_to_obs_grid(agent, world.goal_landmark, obs, 3)
+        # if observed:
+        #     agent.goal_obs = True
+        # # observe other vehicles
+        # for i, other in enumerate(world.vehicles):
+        #     if other is agent:
+        #         continue
+        #     obs, observed = util.add_to_obs_grid(agent, other, obs, agent.id + 4)
+        #     if observed:
+        #         agent.vehicles_obs.append(i)
+
+        # change obs mode
+        obs = np.zeros((len(world.entities), 2))
+        for i, entity in enumerate(world.entities):
+            if entity is agent:
+                obs[i] = np.array([0, 0])
+            else:
+                entity_pos = entity.state.p_pos - agent.state.p_pos
+                entity_polar = util.cart_to_polar(entity_pos)
+                if util.in_fov_check(agent, entity_polar):
+                    obs[i] = entity_polar
+                    if entity is world.goal_landmark:
+                        agent.goal_obs = True
+                    elif isinstance(entity, Vehicle):
+                        agent.vehicles_obs.append(entity.id)
+                else:
+                    obs[i] = np.array([agent.fov.dist[1], 0])
+                if entity is world.goal_landmark:
+                    obs[i] = entity_polar
+
+        return obs.reshape(len(world.entities) * 2)
 
     def done(self, agent, world):
         # check if succeed
