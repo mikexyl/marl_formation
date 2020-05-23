@@ -2,6 +2,24 @@ import multiagent.environment as maenv
 import numpy as np
 
 
+def make_env(scenario_name, arglist, benchmark=False):
+    import multirobot.scenarios as scenarios
+
+    # load scenario from script
+    scenario = scenarios.load(scenario_name + ".py").Scenario()
+    # create world
+    world = scenario.make_world()
+    # create multiagent environment
+    if benchmark:
+        env = MultiAgentEnv(world, scenario.reset_world, scenario.reward, scenario.observation, scenario.benchmark_data,
+                            scenario.done, True)
+    else:
+        env = MultiAgentEnv(world, scenario.reset_world, scenario.reward, scenario.observation, shared_viewer=True)
+        # env = MultiAgentEnv(world, scenario.reset_world, scenario.reward, scenario.observation,
+        #                     done_callback=scenario.done, shared_viewer=True)
+    return env
+
+
 # override ma.env, mainly for rendering
 class MultiAgentEnv(maenv.MultiAgentEnv):
     def __init__(self, world, reset_callback=None, reward_callback=None,

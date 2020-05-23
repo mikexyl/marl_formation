@@ -288,3 +288,4 @@ class Scenario(BaseScenario):
         # todo collision not check here
         # check if collision
         # return util.collision_check(agent, world)
+
