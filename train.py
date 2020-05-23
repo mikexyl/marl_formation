@@ -139,7 +139,7 @@ def train(arglist):
                 agent.experience(obs_n[i], action_n[i], rew_n[i], new_obs_n[i], done_n[i], terminal)
             obs_n = new_obs_n
 
-            if len(episode_rewards) % arglist.save_rate == 0:
+            if arglist.debug_display and len(episode_rewards) % arglist.save_rate == 0:
                 env.render()
 
             for i, rew in enumerate(rew_n):
