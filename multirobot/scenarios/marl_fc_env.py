@@ -25,7 +25,7 @@ class Scenario(BaseScenario):
         super(Scenario, self).__init__()
 
         self.eps_form = 0.1
-        self.eps_goal = 0.5
+        self.eps_goal = 1
 
         self.rew_form_ratio = -1
         self.rew_goal_ratio = 1
@@ -42,11 +42,11 @@ class Scenario(BaseScenario):
 
         # set any world properties first
         world.dim_c = 2
-        num_vehicles = 3
+        num_vehicles = 1
         num_agents = 0
         world.num_agents = num_agents
         world.num_vehicles = num_vehicles
-        num_landmarks = 16
+        num_landmarks = 50
         res_wall = 30
         num_walls = res_wall * 4
 
@@ -60,7 +60,7 @@ class Scenario(BaseScenario):
             landmark.name = 'landmark %d' % i
             landmark.collide = True
             landmark.movable = False
-            landmark.size = 0.3
+            landmark.size = 0.1
             while True:
                 landmark.state.p_pos = np.random.uniform(-world.size_x, world.size_x, world.dim_p)
                 # if landmark is too close to vehicles, repick pos
@@ -100,7 +100,7 @@ class Scenario(BaseScenario):
 
         world.goal_landmark = Landmark()
         world.goal_landmark.name = 'goal landmark'
-        world.goal_landmark.state.p_pos = np.array([world.size_x - 1, world.size_x - 1])
+        # world.goal_landmark.state.p_pos = np.array([world.size_x - 1, world.size_x - 1])
         # world.goal_landmark.state.p_pos = np.array([-3.5, -1])
         world.goal_landmark.state.p_vel = np.zeros(world.dim_p)
         world.goal_landmark.collide = False
@@ -128,14 +128,20 @@ class Scenario(BaseScenario):
                 vehicle.color = np.random.uniform(0, 1, world.dim_color)
 
         self.reset_world(world)
+
         return world
 
     # todo set a arg to choose random or fixed obstacles
     def reset_world(self, world):
         self.reset_vehicles(world)
+        self.reset_goal(world)
         world.form_maintainer.reset()
-
         self.benchmark.stat_rew_condition = np.zeros(3)
+
+    @staticmethod
+    def reset_goal(world):
+        # world.goal_landmark.state.p_pos = np.random.uniform(-1, world.size_x - 1, world.dim_p)
+        world.goal_landmark.state.p_pos = np.array([1, 1])
 
     @staticmethod
     def reset_vehicles(world):
@@ -152,8 +158,9 @@ class Scenario(BaseScenario):
 
     def reward(self, agent, world):
         cf, _ = self.formation_reward(agent, world)
-        cs, _ = self.success_reward(agent, world)
+        cs, rew_success = self.success_reward(agent, world)
         cl, _ = self.collision_reward(agent, world)
+        ce, _ = self.exploration_reward(agent, world)
         self.benchmark.stat_rew_condition += [cf, cs, cl]
 
         rew_total = 0
@@ -163,7 +170,7 @@ class Scenario(BaseScenario):
             if cl:
                 rew_total += self.rew_collision
             if cs:
-                rew_total += self.rew_success
+                rew_total += rew_success
         if not rew_total == 0:
             return rew_total
         else:
@@ -200,14 +207,21 @@ class Scenario(BaseScenario):
 
     # todo now it's success if observed
     def success_reward(self, agent, world):
-        if agent.goal_obs:
-            return True, self.rew_success
-        else:
-            return False, 0
+        # if agent.goal_obs:
+        #     rew = (agent.dist_to_goal - self.eps_goal) / (agent.fov.dist[1] - self.eps_goal) * self.rew_success
+        #     return True, rew
+        # else:
+        #     return False, 0
+        return True, (1 - (agent.dist_to_goal - self.eps_goal) / (
+                    2 * world.size_x - self.eps_goal)) * self.rew_success * 0.05
 
     def collision_reward(self, agent, world):
         if util.collision_check(agent, world) or agent.is_stuck:
             return True, self.rew_collision
+        return False, 0
+
+    def exploration_reward(self, agent, world):
+        # if not agent.is_stuck:
         return False, 0
 
     def observation(self, agent, world):
@@ -237,7 +251,11 @@ class Scenario(BaseScenario):
         #     obs, observed = util.add_to_obs_grid(agent, other, obs, agent.id + 4)
         #     if observed:
         #         agent.vehicles_obs.append(i)
-
+        #
+        # entity_pos = world.goal_landmark.state.p_pos - agent.state.p_pos
+        # entity_polar = util.cart_to_polar(entity_pos)
+        # agent.dist_to_goal = entity_polar[0]
+        # return np.append(obs.reshape(100), entity_polar)
         # change obs mode
         obs = np.zeros((len(world.entities), 2))
         for i, entity in enumerate(world.entities):
@@ -256,13 +274,14 @@ class Scenario(BaseScenario):
                     obs[i] = np.array([agent.fov.dist[1], 0])
                 if entity is world.goal_landmark:
                     obs[i] = entity_polar
+                    agent.dist_to_goal = entity_polar[0]
 
         return obs.reshape(len(world.entities) * 2)
 
     def done(self, agent, world):
         # check if succeed
-        if agent.goal_obs:
-            return True
+        # if agent.goal_obs:
+        #     return True
         # return False
         return agent.is_stuck
         # return util.collision_check(agent, world)

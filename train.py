@@ -15,7 +15,7 @@ def parse_args():
     # Environment
     parser.add_argument("--scenario", type=str, default="simple", help="name of the scenario script")
     parser.add_argument("--max-episode-len", type=int, default=400, help="maximum episode length")
-    parser.add_argument("--num-episodes", type=int, default=60000, help="number of episodes")
+    parser.add_argument("--num-episodes", type=int, default=10000, help="number of episodes")
     parser.add_argument("--num-adversaries", type=int, default=0, help="number of adversaries")
     parser.add_argument("--good-policy", type=str, default="maddpg", help="policy for good agents")
     parser.add_argument("--adv-policy", type=str, default="maddpg", help="policy of adversaries")
@@ -53,7 +53,7 @@ def mlp_model(input, num_outputs, scope, reuse=False, num_units=64, rnn_cell=Non
         out = input
         out = layers.fully_connected(out, num_outputs=num_units, activation_fn=tf.nn.relu)
         out = layers.fully_connected(out, num_outputs=num_units, activation_fn=tf.nn.relu)
-        out = layers.fully_connected(out, num_outputs=num_outputs, activation_fn=tf.nn.tanh)
+        out = layers.fully_connected(out, num_outputs=num_outputs)
         return out
 
 
@@ -67,9 +67,12 @@ def make_env(scenario_name, arglist, benchmark=False):
     world = scenario.make_world()
     # create multiagent environment
     if benchmark:
-        env = MultiAgentEnv(world, scenario.reset_world, scenario.reward, scenario.observation, scenario.benchmark_data, scenario.done, True)
+        env = MultiAgentEnv(world, scenario.reset_world, scenario.reward, scenario.observation, scenario.benchmark_data,
+                            scenario.done, True)
     else:
-        env = MultiAgentEnv(world, scenario.reset_world, scenario.reward, scenario.observation, done_callback=scenario.done, shared_viewer=True)
+        env = MultiAgentEnv(world, scenario.reset_world, scenario.reward, scenario.observation, shared_viewer=True)
+        # env = MultiAgentEnv(world, scenario.reset_world, scenario.reward, scenario.observation,
+        #                     done_callback=scenario.done, shared_viewer=True)
     return env
 
 
@@ -124,6 +127,8 @@ def train(arglist):
             # get action
             # todo need to change the output action pd, to shape the action
             action_n = [agent.action(obs) for agent, obs in zip(trainers, obs_n)]
+            # for i in range(len(action_n)):
+            #     action_n[i] = np.tanh(action_n[i])
             # environment step
             new_obs_n, rew_n, done_n, info_n = env.step(action_n)
             episode_step += 1
@@ -134,11 +139,14 @@ def train(arglist):
                 agent.experience(obs_n[i], action_n[i], rew_n[i], new_obs_n[i], done_n[i], terminal)
             obs_n = new_obs_n
 
+            if len(episode_rewards) % arglist.save_rate == 0:
+                env.render()
+
             for i, rew in enumerate(rew_n):
                 episode_rewards[-1] += rew
                 agent_rewards[i][-1] += rew
 
-            env.render()
+            # env.render()
 
             if done or terminal:
                 # glog.info("episode: %d, episode reward: %5.2f" % ((len(episode_rewards)), episode_rewards[-1]))
