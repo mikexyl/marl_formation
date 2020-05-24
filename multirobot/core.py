@@ -54,7 +54,7 @@ class Vehicle(macore.Agent):
         self.goal_obs = False
 
         self.is_stuck = False
-        self.dist_to_goal=None
+        self.dist_to_goal = None
 
     # a minimised vehicle model
     # todo a better model
@@ -82,11 +82,12 @@ class Vehicle(macore.Agent):
                 self.state.p_vel = t_vel
 
     def action_to_speed(self):
-        # self.body_speed.p_vel_lin = np.array([(self.action.u[0] + 1) * (self.max_vel_x / 2), 0])
-        # self.body_speed.p_vel_ang = self.action.u[1] * self.max_vel_ang
+        self.body_speed.p_vel_lin = np.array([(self.action.u[0] + 1) * (self.max_vel_x / 2), 0])
+        self.body_speed.p_vel_ang = self.action.u[1] * self.max_vel_ang
 
-        self.body_speed.p_vel_lin = np.array([self.action.u[0], 0])
-        self.body_speed.p_vel_ang = self.action.u[1]
+        # self.body_speed.p_vel_lin = np.array([self.action.u[0], 0])
+        # self.body_speed.p_vel_ang = self.action.u[1]
+
 
 class World(macore.World):
     def __init__(self):
