@@ -35,7 +35,7 @@ def train(arglist):
           # total_timesteps=400,
           nb_rollout_steps=400,
           nb_epochs=3000,
-          render=False)
+          render=arglist.display)
 
 
 if __name__ == '__main__':

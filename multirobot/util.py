@@ -18,13 +18,19 @@ def add_to_obs_grid(agent, entity, obs, label):
 
 
 # todo may need a util class for static methods
-def cart_to_polar(pos):
+def cart_to_polar(cart):
     polar = np.zeros(2)
-    polar[0] = np.linalg.norm(pos)
-    polar[1] = math.atan2(pos[1], pos[0])
+    polar[0] = np.linalg.norm(cart)
+    polar[1] = math.atan2(cart[1], cart[0])
     # map output of atan2 to [0,2pi]
     polar[1] = -polar[1] + math.pi if polar[1] < 0 else polar[1]
     return polar
+
+
+def polar_to_cart(polar, ang):
+    polar[1] += ang
+    cart = np.array([polar[0] * math.cos(polar[1]), polar[0] * math.sin(polar[1])])
+    return cart
 
 
 def in_fov_check(agent, entity_polar):
@@ -114,13 +120,17 @@ def parse_args():
     # baselines ddpg
 
     parser.add_argument('--env', help='environment ID', type=str, default='Reacher-v2')
-    parser.add_argument('--env_type', help='type of environment, used when the environment type cannot be automatically determined', type=str)
+    parser.add_argument('--env_type',
+                        help='type of environment, used when the environment type cannot be automatically determined',
+                        type=str)
     parser.add_argument('--seed', help='RNG seed', type=int, default=None)
     parser.add_argument('--alg', help='Algorithm', type=str, default='ppo2')
     parser.add_argument('--num_timesteps', type=float, default=1e6),
     parser.add_argument('--network', help='network type (mlp, cnn, lstm, cnn_lstm, conv_only)', default=None)
     parser.add_argument('--gamestate', help='game state to load (so far only used in retro games)', default=None)
-    parser.add_argument('--num_env', help='Number of environment copies being run in parallel. When not specified, set to number of cpus for Atari, and to 1 for Mujoco', default=None, type=int)
+    parser.add_argument('--num_env',
+                        help='Number of environment copies being run in parallel. When not specified, set to number of cpus for Atari, and to 1 for Mujoco',
+                        default=None, type=int)
     parser.add_argument('--reward_scale', help='Reward scale factor. Default: 1.0', default=1.0, type=float)
     parser.add_argument('--save_path', help='Path to save trained model to', default=None, type=str)
     parser.add_argument('--save_video_interval', help='Save video every x steps (0 = disabled)', default=0, type=int)

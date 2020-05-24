@@ -28,9 +28,9 @@ for group_name in extras:
 
 extras['all'] = all_deps
 
-setup(name='baselines',
+setup(name='marl_formation',
       packages=[package for package in find_packages()
-                if package.startswith('baselines')],
+                if package.startswith('marl_formation')],
       install_requires=[
           'baselines>=0.1.5',
           'gym>=0.15.4, <0.16.0',
@@ -44,11 +44,11 @@ setup(name='baselines',
           'networkx'
       ],
       extras_require=extras,
-      description='OpenAI baselines: high quality implementations of reinforcement learning algorithms',
-      author='OpenAI',
+      description='multi robot formation control based on marl',
+      author='Xiangyu Liu',
       url='https://github.com/openai/baselines',
-      author_email='gym@openai.com',
-      version='0.1.6')
+      author_email='xiangyu002@e.ntu.edu.sg',
+      version='0.0.1')
 
 # ensure there is some tensorflow build with version above 1.4
 import pkg_resources

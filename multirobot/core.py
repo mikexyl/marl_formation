@@ -24,14 +24,24 @@ class VehicleBodySpeed(object):
         self.p_vel_ang = None
 
 
-class FovParams(object):
-    def __init__(self, ang=2 / 3 * math.pi, dist=np.array([0.5, 2.5]), res=np.array([10, 10])):
+class Fov(object):
+    def __init__(self, vehicle, ang= math.pi, dist=np.array([0.2, 3]), res=np.array([20, 20])):
         self.dist = dist
+        if self.dist[0] < vehicle.size:
+            self.dist[0] = vehicle.size
         self.ang = ang
         # res[0] -> res of dist, res[1]-> res of ang
         self.res = res
-        self.dist_res = (dist[1] - dist[0]) / res[0]
-        self.ang_res = ang / res[1]
+        self.dist_res = (dist[1] - dist[0]) / (res[0]-1)
+        self.ang_res = ang / (res[1]-1)
+        self.grid = None
+        self.grid_init()
+
+    def grid_init(self):
+        self.grid = np.zeros((self.res[0], self.res[1], 2), dtype=np.float16)
+        for i in range(self.res[0]):
+            for j in range(self.res[1]):
+                self.grid[i][j] = np.array([self.dist[0] + self.dist_res * i, -0.5 * self.ang + self.ang_res * j])
 
 
 class Vehicle(macore.Agent):
@@ -49,7 +59,7 @@ class Vehicle(macore.Agent):
         self.obs = None
         self.accel = 1
 
-        self.fov = FovParams()
+        self.fov = Fov(self)
         self.vehicles_obs = None
         self.goal_obs = False
 

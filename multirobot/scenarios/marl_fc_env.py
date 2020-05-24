@@ -231,7 +231,25 @@ class Scenario(BaseScenario):
         agent.goal_obs = False
         agent.vehicles_obs = []
 
-        # obs = np.zeros(agent.fov.res)
+        # obs = np.zeros(agent.fov.res, dtype=np.uint8)
+        # for i in range(agent.fov.grid.shape[0]):
+        #     for j in range(agent.fov.grid.shape[1]):
+        #         cart = util.polar_to_cart(agent.fov.grid[i][j], agent.state.p_ang)
+        #         # todo a little to iterate all objects here
+        #         for entity in world.entities:
+        #             cand = []
+        #             if np.linalg.norm(cart - entity.state.p_pos) <= entity.size + agent.size:
+        #                 if 'landmark' in entity.name or 'wall' in entity.name:
+        #                     cand.append(1)
+        #                 elif 'goal' in entity.name:
+        #                     cand.append(100)
+        #                 elif 'agent' in entity.name:
+        #                     cand.append(1)
+        #                 elif 'vehicle' in entity.name:
+        #                     cand.append(200 + entity.id)
+        #             if len(cand)>1:
+        #                 obs[i][j] = max(cand)
+
         # # get positions of all entities in this agent's reference frame
         # for entity in world.landmarks:
         #     obs, _ = util.add_to_obs_grid(agent, entity, obs, 1)
@@ -251,11 +269,14 @@ class Scenario(BaseScenario):
         #     obs, observed = util.add_to_obs_grid(agent, other, obs, agent.id + 4)
         #     if observed:
         #         agent.vehicles_obs.append(i)
-        #
+
         # entity_pos = world.goal_landmark.state.p_pos - agent.state.p_pos
         # entity_polar = util.cart_to_polar(entity_pos)
         # agent.dist_to_goal = entity_polar[0]
-        # return np.append(obs.reshape(100), entity_polar)
+        # agent.goal_obs = True
+        # # return np.append(obs.reshape(obs.shape[0] * obs.shape[1]), entity_polar)
+        # return obs.reshape(obs.shape[0] * obs.shape[1])
+
         # change obs mode
         obs = np.zeros((len(world.entities), 2))
         for i, entity in enumerate(world.entities):
@@ -271,7 +292,7 @@ class Scenario(BaseScenario):
                     elif isinstance(entity, Vehicle):
                         agent.vehicles_obs.append(entity.id)
                 else:
-                    obs[i] = np.array([agent.fov.dist[1], 0])
+                    obs[i] = np.array([0, 0])
                 if entity is world.goal_landmark:
                     obs[i] = entity_polar
                     agent.dist_to_goal = entity_polar[0]
