@@ -6,5 +6,9 @@
 5. how to give scores to subgraph
 6. the environment obstacles positions generated randomly
 
+## Todo List
+1. setup not tested
+2. need shell scripts with params
+
 ## Change Log
 24/05/2020: added ddpg from baselines training with the marl_fc_env, got workable result, so maybe something wrong with maddpg
