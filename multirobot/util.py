@@ -111,6 +111,11 @@ def parse_args():
     parser.add_argument("--plots-dir", type=str, default="./learning_curves/",
                         help="directory where plot data is saved")
 
+    # baselines ddpg
+
+    parser.add_argument("--log-path", type=str, default="/tmp/ddpg_log/",
+                        help="directory in which training state and model are loaded")
+
     parser.add_argument("--debug-display", action="store_true", default=False)
 
     return parser.parse_args()

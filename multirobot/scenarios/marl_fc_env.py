@@ -213,7 +213,7 @@ class Scenario(BaseScenario):
         # else:
         #     return False, 0
         return True, (1 - (agent.dist_to_goal - self.eps_goal) / (
-                    2 * world.size_x - self.eps_goal)) * self.rew_success * 0.05
+                2 * world.size_x - self.eps_goal)) * self.rew_success * 0.05
 
     def collision_reward(self, agent, world):
         if util.collision_check(agent, world) or agent.is_stuck:
@@ -289,3 +289,5 @@ class Scenario(BaseScenario):
         # check if collision
         # return util.collision_check(agent, world)
 
+    def benchmark_data(self, agent, world):
+        return 0
