@@ -13,6 +13,7 @@ from baselines.ddpg.models import Actor, Critic
 from baselines.ddpg.noise import AdaptiveParamNoiseSpec, NormalActionNoise, OrnsteinUhlenbeckActionNoise
 
 from glog import info
+
 # disable mpi for now
 # try:
 #     from mpi4py import MPI
@@ -234,51 +235,49 @@ def learn(network, env,
         # Log stats.
         # XXX shouldn't call np.mean on variable length lists
         duration = time.time() - start_time
-        for i, agent in enumerate(agents):
-            stats = agent.get_stats()
-            combined_stats = stats.copy()
-            combined_stats['id'] = i
-            combined_stats['rollout/return'] = np.mean(epoch_episode_rewards)
-            combined_stats['rollout/return_std'] = np.std(epoch_episode_rewards)
-            combined_stats['rollout/return_history'] = np.mean(episode_rewards_history)
-            combined_stats['rollout/return_history_std'] = np.std(episode_rewards_history)
-            combined_stats['rollout/episode_steps'] = np.mean(epoch_episode_steps)
-            combined_stats['rollout/actions_mean'] = np.mean(epoch_actions)
-            combined_stats['rollout/Q_mean'] = np.mean(epoch_qs)
-            combined_stats['train/loss_actor'] = np.mean(epoch_actor_losses)
-            combined_stats['train/loss_critic'] = np.mean(epoch_critic_losses)
-            combined_stats['train/param_noise_distance'] = np.mean(epoch_adaptive_distances)
-            combined_stats['total/duration'] = duration
-            combined_stats['total/steps_per_second'] = float(t) / float(duration)
-            combined_stats['total/episodes'] = episodes
-            combined_stats['rollout/episodes'] = epoch_episodes
-            combined_stats['rollout/actions_std'] = np.std(epoch_actions)
-            # Evaluation statistics.
-            if eval_env is not None:
-                # later
-                pass
+        combined_stats = {}
+        combined_stats['multi/n'] = env.n
+        combined_stats['rollout/return'] = np.mean(epoch_episode_rewards)
+        combined_stats['rollout/return_std'] = np.std(epoch_episode_rewards)
+        combined_stats['rollout/return_history'] = np.mean(episode_rewards_history)
+        combined_stats['rollout/return_history_std'] = np.std(episode_rewards_history)
+        combined_stats['rollout/episode_steps'] = np.mean(epoch_episode_steps)
+        combined_stats['rollout/actions_mean'] = np.mean(epoch_actions)
+        combined_stats['rollout/Q_mean'] = np.mean(epoch_qs)
+        combined_stats['train/loss_actor'] = np.mean(epoch_actor_losses)
+        combined_stats['train/loss_critic'] = np.mean(epoch_critic_losses)
+        combined_stats['train/param_noise_distance'] = np.mean(epoch_adaptive_distances)
+        combined_stats['total/duration'] = duration
+        combined_stats['total/steps_per_second'] = float(t) / float(duration)
+        combined_stats['total/episodes'] = episodes
+        combined_stats['rollout/episodes'] = epoch_episodes
+        combined_stats['rollout/actions_std'] = np.std(epoch_actions)
+        # Evaluation statistics.
+        if eval_env is not None:
+            # later
+            pass
 
-            combined_stats_sums = np.array([np.array(x).flatten()[0] for x in combined_stats.values()])
-            if MPI is not None:
-                combined_stats_sums = MPI.COMM_WORLD.allreduce(combined_stats_sums)
+        combined_stats_sums = np.array([np.array(x).flatten()[0] for x in combined_stats.values()])
+        if MPI is not None:
+            combined_stats_sums = MPI.COMM_WORLD.allreduce(combined_stats_sums)
 
-            combined_stats = {k: v / mpi_size for (k, v) in zip(combined_stats.keys(), combined_stats_sums)}
+        combined_stats = {k: v / mpi_size for (k, v) in zip(combined_stats.keys(), combined_stats_sums)}
 
-            # Total statistics.
-            combined_stats['total/epochs'] = epoch + 1
-            combined_stats['total/steps'] = t
+        # Total statistics.
+        combined_stats['total/epochs'] = epoch + 1
+        combined_stats['total/steps'] = t
 
-            for key in sorted(combined_stats.keys()):
-                logger.record_tabular(key, combined_stats[key])
+        for key in sorted(combined_stats.keys()):
+            logger.record_tabular(key, combined_stats[key])
 
-            if rank == 0:
-                logger.dump_tabular()
-            logger.info('')
-            logdir = logger.get_dir()
-            if rank == 0 and logdir:
-                if hasattr(env, 'get_state'):
-                    with open(os.path.join(logdir, 'env_state.pkl'), 'wb') as f:
-                        pickle.dump(env.get_state(), f)
-                if eval_env and hasattr(eval_env, 'get_state'):
-                    with open(os.path.join(logdir, 'eval_env_state.pkl'), 'wb') as f:
-                        pickle.dump(eval_env.get_state(), f)
+        if rank == 0:
+            logger.dump_tabular()
+        logger.info('')
+        logdir = logger.get_dir()
+        if rank == 0 and logdir:
+            if hasattr(env, 'get_state'):
+                with open(os.path.join(logdir, 'env_state.pkl'), 'wb') as f:
+                    pickle.dump(env.get_state(), f)
+            if eval_env and hasattr(eval_env, 'get_state'):
+                with open(os.path.join(logdir, 'eval_env_state.pkl'), 'wb') as f:
+                    pickle.dump(eval_env.get_state(), f)

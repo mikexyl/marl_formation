@@ -23,6 +23,8 @@ class DdpgEnv(GymEnv):
     def step(self, action_n):
         action_n = [action.reshape(2) for action in action_n]
         obs_n, rew_n, done_n, info_n = self.maddpg_env.step(action_n)
+        if done_n[0]:
+            pass
         return self.obs_reshape(obs_n), np.array(rew_n), np.array(done_n), np.array(info_n)
 
     def reset(self):
