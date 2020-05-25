@@ -9,6 +9,7 @@
 ## Todo List
 1. setup not tested
 2. need shell scripts with params
+3. ddpg_baselines result looks good, but some values cant understand yet
 
 ## Change Log
 24/05/2020: added ddpg from baselines training with the marl_fc_env, got workable result, so maybe something wrong with maddpg
