@@ -59,16 +59,18 @@ def learn(network, env,
     else:
         rank = 0
 
-    nb_actions = env.action_space.shape[-1]
-    assert (np.abs(env.action_space.low) == env.action_space.high).all()  # we assume symmetric actions.
+    nb_actions_n = [action_space.shape[-1] for action_space in env.action_space]
+    assert np.array([(np.abs(action_space.low) == action_space.high) for action_space in
+                     env.action_space]).all()  # we assume symmetric actions.
 
-    memory = Memory(limit=int(1e6), action_shape=env.action_space.shape, observation_shape=env.observation_space.shape)
-    critic = [Critic(network=network, **network_kwargs) for _ in range(env.n)] if not shared_critic else [
+    memory = Memory(limit=int(1e6), action_shape=env.action_space_n_shape,
+                    observation_shape=env.observation_space_n_shape)
+    critic_n = [Critic(network=network, **network_kwargs) for _ in range(env.n)] if not shared_critic else [
         Critic(network=network, **network_kwargs)]
-    actor = [Actor(nb_actions, network=network, **network_kwargs) for _ in range(env.n)]
+    actor_n = [Actor(nb_actions_n[i], network=network, **network_kwargs) for i in range(env.n)]
 
-    action_noise = None
-    param_noise = None
+    action_noise_n = []
+    param_noise_n = []
     if noise_type is not None:
         for current_noise_type in noise_type.split(','):
             current_noise_type = current_noise_type.strip()
@@ -76,36 +78,31 @@ def learn(network, env,
                 pass
             elif 'adaptive-param' in current_noise_type:
                 _, stddev = current_noise_type.split('_')
-                param_noise = AdaptiveParamNoiseSpec(initial_stddev=float(stddev), desired_action_stddev=float(stddev))
+                param_noise_n = [
+                    AdaptiveParamNoiseSpec(initial_stddev=float(stddev), desired_action_stddev=float(stddev)) for _ in
+                    range(env.n)]
             elif 'normal' in current_noise_type:
                 _, stddev = current_noise_type.split('_')
-                action_noise = NormalActionNoise(mu=np.zeros(nb_actions), sigma=float(stddev) * np.ones(nb_actions))
+                action_noise_n = [NormalActionNoise(mu=np.zeros(nb_actions), sigma=float(stddev) * np.ones(nb_actions))
+                                  for nb_actions in nb_actions_n]
             elif 'ou' in current_noise_type:
                 _, stddev = current_noise_type.split('_')
-                action_noise = OrnsteinUhlenbeckActionNoise(mu=np.zeros(nb_actions),
-                                                            sigma=float(stddev) * np.ones(nb_actions))
+                action_noise_n = [OrnsteinUhlenbeckActionNoise(mu=np.zeros(nb_actions),
+                                                               sigma=float(stddev) * np.ones(nb_actions)) for nb_actions
+                                  in nb_actions_n]
             else:
                 raise RuntimeError('unknown noise type "{}"'.format(current_noise_type))
 
     max_action = env.action_space.high
     logger.info('scaling actions by {} before executing in env'.format(max_action))
 
-    if shared_critic:
-        agent = MADDPG(actor, critic, memory, env.observation_space.shape, env.action_space.shape,
-                       gamma=gamma, tau=tau, normalize_returns=normalize_returns,
-                       normalize_observations=normalize_observations,
-                       batch_size=batch_size, action_noise=action_noise, param_noise=param_noise,
-                       critic_l2_reg=critic_l2_reg,
-                       actor_lr=actor_lr, critic_lr=critic_lr, enable_popart=popart, clip_norm=clip_norm,
-                       reward_scale=reward_scale, shared_critic=shared_critic)
-    else:
-        agent = MADDPG(actor, critic, memory, env.observation_space.shape, env.action_space.shape,
-                       gamma=gamma, tau=tau, normalize_returns=normalize_returns,
-                       normalize_observations=normalize_observations,
-                       batch_size=batch_size, action_noise=action_noise, param_noise=param_noise,
-                       critic_l2_reg=critic_l2_reg,
-                       actor_lr=actor_lr, critic_lr=critic_lr, enable_popart=popart, clip_norm=clip_norm,
-                       reward_scale=reward_scale, shared_critic=shared_critic)
+    agent = MADDPG(actor_n, critic_n, memory, env.observation_space.shape, env.action_space.shape,
+                   gamma=gamma, tau=tau, normalize_returns=normalize_returns,
+                   normalize_observations=normalize_observations,
+                   batch_size=batch_size, action_noise=action_noise_n, param_noise=param_noise_n,
+                   critic_l2_reg=critic_l2_reg,
+                   actor_lr=actor_lr, critic_lr=critic_lr, enable_popart=popart, clip_norm=clip_norm,
+                   reward_scale=reward_scale, shared_critic=shared_critic)
 
     logger.info('Using agent with the following configuration:')
     logger.info(str(agent.__dict__.items()))

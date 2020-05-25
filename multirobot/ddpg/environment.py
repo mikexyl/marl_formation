@@ -13,10 +13,9 @@ class DdpgEnv(GymEnv):
             self.maddpg_env = maddpg_env
             self.action_space = maddpg_env.action_space
             self.observation_space = maddpg_env.observation_space
-
-    @property
-    def n(self):
-        return self.maddpg_env.n
+            self.n = self.maddpg_env.n
+            self.action_space_n_shape = maddpg_env.action_space[0].shape[-1] * self.n
+            self.observation_space_n_shape = maddpg_env.observation_space[0].shape[-1] * self.n
 
     def step(self, action_n):
         action_n = [action.reshape(2) for action in action_n]
