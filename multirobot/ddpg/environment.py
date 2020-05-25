@@ -8,8 +8,6 @@ class DdpgEnv(GymEnv):
     def __init__(self, maddpg_env):
         if not isinstance(maddpg_env, MaddpgEnv):
             raise NotImplementedError
-        elif maddpg_env.n != 1:
-            raise NotImplementedError
         else:
             super(DdpgEnv, self).__init__()
             self.maddpg_env = maddpg_env
