@@ -3,23 +3,21 @@ import time
 from collections import deque
 import pickle
 
-import baselines.common.tf_util as U
-import numpy as np
-from baselines import logger
-from baselines.common import set_global_seeds
 from baselines.ddpg.ddpg_learner import DDPG
-from baselines.ddpg.memory import Memory
 from baselines.ddpg.models import Actor, Critic
+from baselines.ddpg.memory import Memory
 from baselines.ddpg.noise import AdaptiveParamNoiseSpec, NormalActionNoise, OrnsteinUhlenbeckActionNoise
+from baselines.common import set_global_seeds
+import baselines.common.tf_util as U
 
-from glog import info
+from baselines import logger
+import numpy as np
+from multirobot.maddpg.maddpg_learner import MADDPG
 
-# disable mpi for now
-# try:
-#     from mpi4py import MPI
-# except ImportError:
-#     MPI = None
-MPI = None
+try:
+    from mpi4py import MPI
+except ImportError:
+    MPI = None
 
 
 def learn(network, env,
@@ -50,9 +48,6 @@ def learn(network, env,
           **network_kwargs):
     set_global_seeds(seed)
 
-    # multi robot env check
-    assert len(env.action_space) == env.n and len(env.observation_space) == env.n
-
     if total_timesteps is not None:
         assert nb_epochs is None
         nb_epochs = int(total_timesteps) // (nb_epoch_cycles * nb_rollout_steps)
@@ -64,21 +59,13 @@ def learn(network, env,
     else:
         rank = 0
 
-    nb_actions = [action_space.shape[-1] for action_space in env.action_space]
-    assert np.array([np.abs(action_space.low) == action_space.high for action_space in env.action_space]).all()
-    # assert (np.abs(env.action_space.low) == env.action_space.high).all()  # we assume symmetric actions.
+    nb_actions = env.action_space.shape[-1]
+    assert (np.abs(env.action_space.low) == env.action_space.high).all()  # we assume symmetric actions.
 
-    # todo
-    memory = Memory(limit=int(1e6), action_shape=env.action_space[0].shape,
-                    observation_shape=env.observation_space[0].shape)
-
-    critics = None
-    if shared_critic is True:
-        critics = [Critic(network=network, **network_kwargs)]
-    else:
-        critics = [Critic(network=network, **network_kwargs) for _ in range(env.n)]
-
-    actors = [Actor(nb_actions[i], network=network, **network_kwargs) for i in range(env.n)]
+    memory = Memory(limit=int(1e6), action_shape=env.action_space.shape, observation_shape=env.observation_space.shape)
+    critic = [Critic(network=network, **network_kwargs) for _ in range(env.n)] if not shared_critic else [
+        Critic(network=network, **network_kwargs)]
+    actor = [Actor(nb_actions, network=network, **network_kwargs) for _ in range(env.n)]
 
     action_noise = None
     param_noise = None
@@ -100,47 +87,48 @@ def learn(network, env,
             else:
                 raise RuntimeError('unknown noise type "{}"'.format(current_noise_type))
 
-    max_actions = np.array([action_space.high for action_space in env.action_space])
-    logger.info('scaling actions by {} before executing in env'.format(max_actions))
+    max_action = env.action_space.high
+    logger.info('scaling actions by {} before executing in env'.format(max_action))
 
     if shared_critic:
-        agents = [DDPG(actors[i], critics[0], memory, env.observation_space[i].shape, env.action_space[i].shape,
+        agent = MADDPG(actor, critic, memory, env.observation_space.shape, env.action_space.shape,
                        gamma=gamma, tau=tau, normalize_returns=normalize_returns,
                        normalize_observations=normalize_observations,
                        batch_size=batch_size, action_noise=action_noise, param_noise=param_noise,
                        critic_l2_reg=critic_l2_reg,
                        actor_lr=actor_lr, critic_lr=critic_lr, enable_popart=popart, clip_norm=clip_norm,
-                       reward_scale=reward_scale) for i in range(env.n)]
+                       reward_scale=reward_scale, shared_critic=shared_critic)
     else:
-        agents = [DDPG(actors[i], critics[i], memory, env.observation_space[i], env.action_space[i],
+        agent = MADDPG(actor, critic, memory, env.observation_space.shape, env.action_space.shape,
                        gamma=gamma, tau=tau, normalize_returns=normalize_returns,
                        normalize_observations=normalize_observations,
                        batch_size=batch_size, action_noise=action_noise, param_noise=param_noise,
                        critic_l2_reg=critic_l2_reg,
                        actor_lr=actor_lr, critic_lr=critic_lr, enable_popart=popart, clip_norm=clip_norm,
-                       reward_scale=reward_scale) for i in range(env.n)]
+                       reward_scale=reward_scale, shared_critic=shared_critic)
+
     logger.info('Using agent with the following configuration:')
-    logger.info(str(agent.__dict__.items()) for agent in agents)
+    logger.info(str(agent.__dict__.items()))
 
     eval_episode_rewards_history = deque(maxlen=100)
     episode_rewards_history = deque(maxlen=100)
-
     sess = U.get_session()
-    # todo this looks not right
-    for agent in agents:
-        agent.initialize(sess)
-        sess.graph.finalize()
+    # Prepare everything.
+    agent.initialize(sess)
+    sess.graph.finalize()
 
-        agent.reset()
+    agent.reset()
 
-    obs_n = env.reset()
+    obs = env.reset()
     if eval_env is not None:
         eval_obs = eval_env.reset()
-    nb_agents = env.n
-    episode_reward = np.zeros(nb_agents, dtype=np.float32)  # vector
-    episode_step = np.zeros(nb_agents, dtype=int)  # vector
-    episodes = 0
-    t = 0
+    nenvs = obs.shape[0]
+
+    episode_reward = np.zeros(nenvs, dtype=np.float32)  # vector
+    episode_step = np.zeros(nenvs, dtype=int)  # vector
+    episodes = 0  # scalar
+    t = 0  # scalar
+
     epoch = 0
 
     start_time = time.time()
@@ -152,91 +140,97 @@ def learn(network, env,
     epoch_episodes = 0
     for epoch in range(nb_epochs):
         for cycle in range(nb_epoch_cycles):
-            info("epoch %d, cycle %d", epoch, cycle)
             # Perform rollouts.
+            if nenvs > 1:
+                # if simulating multiple envs in parallel, impossible to reset agent at the end of the episode in each
+                # of the environments, so resetting here instead
+                agent.reset()
             for t_rollout in range(nb_rollout_steps):
                 # Predict next action.
-                # action_n, q_n, _, _ = np.split(
-                #     np.array([agent.step(obs_n, apply_noise=True, compute_Q=True) for agent in agents]), 2)
-                action_n = []
-                q_n = []
-                for agent in agents:
-                    action, q, _, _ = agent.step(obs_n, apply_noise=True, compute_Q=True)
-                    action_n.append(action)
-                    q_n.append(q)
+                action, q, _, _ = agent.step(obs, apply_noise=True, compute_Q=True)
 
                 # Execute next action.
                 if rank == 0 and render:
                     env.render()
 
-                new_obs_n, r_n, done_n, info_n = env.step(
-                    max_actions * action_n)  # scale for execution in env (as far as DDPG is concerned, every action is in [-1, 1])
+                # max_action is of dimension A, whereas action is dimension (nenvs, A) - the multiplication gets broadcasted to the batch
+                new_obs, r, done, info = env.step(
+                    max_action * action)  # scale for execution in env (as far as DDPG is concerned, every action is in [-1, 1])
+                # note these outputs are batched from vecenv
 
                 t += 1
-                episode_reward += r_n
+                if rank == 0 and render:
+                    env.render()
+                episode_reward += r
                 episode_step += 1
 
                 # Book-keeping.
-                epoch_actions.append(action_n)
-                epoch_qs.append(q_n)
-                # todo centralized stroe?
-                for agent in agents:
-                    agent.store_transition(obs_n, action_n, r_n, new_obs_n,
-                                           done_n)  # the batched data will be unrolled in memory.py's append.
+                epoch_actions.append(action)
+                epoch_qs.append(q)
+                agent.store_transition(obs, action, r, new_obs,
+                                       done)  # the batched data will be unrolled in memory.py's append.
 
-                obs_n = new_obs_n
+                obs = new_obs
 
-                for d in range(len(done_n)):
-                    if done_n[d]:
+                for d in range(len(done)):
+                    if done[d]:
                         # Episode done.
                         epoch_episode_rewards.append(episode_reward[d])
                         episode_rewards_history.append(episode_reward[d])
                         epoch_episode_steps.append(episode_step[d])
-                        # todo these resets doubtful
                         episode_reward[d] = 0.
                         episode_step[d] = 0
                         epoch_episodes += 1
                         episodes += 1
-                        # todo if this resets the centralized critic?
-                        for agent in agents:
+                        if nenvs == 1:
                             agent.reset()
 
-            # train
+            # Train.
             epoch_actor_losses = []
             epoch_critic_losses = []
             epoch_adaptive_distances = []
             for t_train in range(nb_train_steps):
                 # Adapt param noise, if necessary.
                 if memory.nb_entries >= batch_size and t_train % param_noise_adaption_interval == 0:
-                    for agent in agents:
-                        distance = agent.adapt_param_noise()
-                        epoch_adaptive_distances.append(distance)
+                    distance = agent.adapt_param_noise()
+                    epoch_adaptive_distances.append(distance)
 
-            cl_n = []
-            al_n = []
-            for agent in agents:
                 cl, al = agent.train()
-                cl_n.append(cl)
-                al_n.append(al)
-
                 epoch_critic_losses.append(cl)
                 epoch_actor_losses.append(al)
                 agent.update_target_net()
 
-                # Evaluate
-                # later
+            # Evaluate.
+            eval_episode_rewards = []
+            eval_qs = []
+            if eval_env is not None:
+                nenvs_eval = eval_obs.shape[0]
+                eval_episode_reward = np.zeros(nenvs_eval, dtype=np.float32)
+                for t_rollout in range(nb_eval_steps):
+                    eval_action, eval_q, _, _ = agent.step(eval_obs, apply_noise=False, compute_Q=True)
+                    eval_obs, eval_r, eval_done, eval_info = eval_env.step(
+                        max_action * eval_action)  # scale for execution in env (as far as DDPG is concerned, every action is in [-1, 1])
+                    if render_eval:
+                        eval_env.render()
+                    eval_episode_reward += eval_r
+
+                    eval_qs.append(eval_q)
+                    for d in range(len(eval_done)):
+                        if eval_done[d]:
+                            eval_episode_rewards.append(eval_episode_reward[d])
+                            eval_episode_rewards_history.append(eval_episode_reward[d])
+                            eval_episode_reward[d] = 0.0
 
         if MPI is not None:
             mpi_size = MPI.COMM_WORLD.Get_size()
         else:
             mpi_size = 1
 
-        # todo logger later
         # Log stats.
         # XXX shouldn't call np.mean on variable length lists
         duration = time.time() - start_time
-        combined_stats = {}
-        combined_stats['multi/n'] = env.n
+        stats = agent.get_stats()
+        combined_stats = stats.copy()
         combined_stats['rollout/return'] = np.mean(epoch_episode_rewards)
         combined_stats['rollout/return_std'] = np.std(epoch_episode_rewards)
         combined_stats['rollout/return_history'] = np.mean(episode_rewards_history)
@@ -254,8 +248,19 @@ def learn(network, env,
         combined_stats['rollout/actions_std'] = np.std(epoch_actions)
         # Evaluation statistics.
         if eval_env is not None:
-            # later
-            pass
+            combined_stats['eval/return'] = eval_episode_rewards
+            combined_stats['eval/return_history'] = np.mean(eval_episode_rewards_history)
+            combined_stats['eval/Q'] = eval_qs
+            combined_stats['eval/episodes'] = len(eval_episode_rewards)
+
+        def as_scalar(x):
+            if isinstance(x, np.ndarray):
+                assert x.size == 1
+                return x[0]
+            elif np.isscalar(x):
+                return x
+            else:
+                raise ValueError('expected scalar, got %s' % x)
 
         combined_stats_sums = np.array([np.array(x).flatten()[0] for x in combined_stats.values()])
         if MPI is not None:
@@ -281,3 +286,5 @@ def learn(network, env,
             if eval_env and hasattr(eval_env, 'get_state'):
                 with open(os.path.join(logdir, 'eval_env_state.pkl'), 'wb') as f:
                     pickle.dump(eval_env.get_state(), f)
+
+    return agent
