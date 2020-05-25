@@ -67,7 +67,8 @@ def learn(network, env,
     # assert (np.abs(env.action_space.low) == env.action_space.high).all()  # we assume symmetric actions.
 
     # todo
-    memory = Memory(limit=int(1e6), action_shape=env.action_space[0].shape, observation_shape=env.observation_space[0].shape)
+    memory = Memory(limit=int(1e6), action_shape=env.action_space[0].shape,
+                    observation_shape=env.observation_space[0].shape)
 
     critics = None
     if shared_critic is True:
@@ -101,7 +102,7 @@ def learn(network, env,
     logger.info('scaling actions by {} before executing in env'.format(max_actions))
 
     if shared_critic:
-        agents = [DDPG(actors[i], critics[0], memory, env.observation_space[i], env.action_space[i],
+        agents = [DDPG(actors[i], critics[0], memory, env.observation_space[i].shape, env.action_space[i].shape,
                        gamma=gamma, tau=tau, normalize_returns=normalize_returns,
                        normalize_observations=normalize_observations,
                        batch_size=batch_size, action_noise=action_noise, param_noise=param_noise,
@@ -152,8 +153,14 @@ def learn(network, env,
             # Perform rollouts.
             for t_rollout in range(nb_rollout_steps):
                 # Predict next action.
-                action_n, q_n, _, _ = np.split(
-                    np.array([agent.step(obs_n, apply_noise=True, compute_Q=True) for agent in agents]), 2)
+                # action_n, q_n, _, _ = np.split(
+                #     np.array([agent.step(obs_n, apply_noise=True, compute_Q=True) for agent in agents]), 2)
+                action_n = []
+                q_n = []
+                for agent in agents:
+                    action, q, _, _=agent.step(obs_n, apply_noise=True, compute_Q=True)
+                    action_n.append(action)
+                    q_n.append(q)
 
                 # Execute next action.
                 if rank == 0 and render:
