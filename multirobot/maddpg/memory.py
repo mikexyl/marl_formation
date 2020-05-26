@@ -68,12 +68,12 @@ class Memory(object):
                 'terminals1': array_min2d(terminal1_batch),
             }
         else:
-            result={
-                'obs0': array_min2d(obs0_batch),
-                'obs1': array_min2d(obs1_batch),
-                'rewards': array_min2d(reward_batch),
-                'actions': array_min2d(action_batch),
-                'terminals1': array_min2d(terminal1_batch),
+            result = {
+                'obs0': array_min2d(obs0_batch[:, agent_id]),
+                'obs1': array_min2d(obs1_batch[:, agent_id]),
+                'rewards': array_min2d(reward_batch[:, agent_id]),
+                'actions': array_min2d(action_batch[:, agent_id]),
+                'terminals1': array_min2d(terminal1_batch[:, agent_id]),
             }
         return result
 

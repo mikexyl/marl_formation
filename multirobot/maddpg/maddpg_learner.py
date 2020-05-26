@@ -1,170 +1,12 @@
-from copy import copy
-from functools import reduce
-
-import numpy as np
-import tensorflow as tf
-import tensorflow.contrib as tc
-
-from baselines import logger
-from baselines.common.mpi_adam import MpiAdam
 import baselines.common.tf_util as U
-from baselines.common.mpi_running_mean_std import RunningMeanStd
-from baselines.ddpg.ddpg import DDPG
+import numpy as np
+
+from multirobot.maddpg.agent import Agent
 
 try:
     from mpi4py import MPI
 except ImportError:
     MPI = None
-
-
-def normalize(x, stats):
-    if stats is None:
-        return x
-    return (x - stats.mean) / (stats.std + 1e-8)
-
-
-def denormalize(x, stats):
-    if stats is None:
-        return x
-    return x * stats.std + stats.mean
-
-
-def reduce_std(x, axis=None, keepdims=False):
-    return tf.sqrt(reduce_var(x, axis=axis, keepdims=keepdims))
-
-
-def reduce_var(x, axis=None, keepdims=False):
-    m = tf.reduce_mean(x, axis=axis, keepdims=True)
-    devs_squared = tf.square(x - m)
-    return tf.reduce_mean(devs_squared, axis=axis, keepdims=keepdims)
-
-
-def get_target_updates(vars, target_vars, tau):
-    logger.info('setting up target updates ...')
-    soft_updates = []
-    init_updates = []
-    assert len(vars) == len(target_vars)
-    for var, target_var in zip(vars, target_vars):
-        logger.info('  {} <- {}'.format(target_var.name, var.name))
-        init_updates.append(tf.assign(target_var, var))
-        soft_updates.append(tf.assign(target_var, (1. - tau) * target_var + tau * var))
-    assert len(init_updates) == len(vars)
-    assert len(soft_updates) == len(vars)
-    return tf.group(*init_updates), tf.group(*soft_updates)
-
-
-def get_perturbed_actor_updates(actor, perturbed_actor, param_noise_stddev):
-    assert len(actor.vars) == len(perturbed_actor.vars)
-    assert len(actor.perturbable_vars) == len(perturbed_actor.perturbable_vars)
-
-    updates = []
-    for var, perturbed_var in zip(actor.vars, perturbed_actor.vars):
-        if var in actor.perturbable_vars:
-            logger.info('  {} <- {} + noise'.format(perturbed_var.name, var.name))
-            updates.append(
-                tf.assign(perturbed_var, var + tf.random_normal(tf.shape(var), mean=0., stddev=param_noise_stddev)))
-        else:
-            logger.info('  {} <- {}'.format(perturbed_var.name, var.name))
-            updates.append(tf.assign(perturbed_var, var))
-    assert len(updates) == len(actor.vars)
-    return tf.group(*updates)
-
-
-class Agent(DDPG):
-    def __init__(self, actor, critic, memory, observation_shape, action_shape, param_noise=None, action_noise=None,
-                 gamma=0.99, tau=0.001, normalize_returns=False, enable_popart=False, normalize_observations=True,
-                 batch_size=128, observation_range=(-5., 5.), action_range=(-1., 1.),
-                 return_range=(-np.inf, np.inf),
-                 critic_l2_reg=0., actor_lr=1e-4, critic_lr=1e-3, clip_norm=None, reward_scale=1.,
-                 id=None):
-
-        assert id is not None
-        # Inputs.
-        self.obs0 = tf.placeholder(tf.float32, shape=(None,) + observation_shape, name='obs0')
-        self.obs1 = tf.placeholder(tf.float32, shape=(None,) + observation_shape, name='obs1')
-        self.terminals1 = tf.placeholder(tf.float32, shape=(None, 1), name='terminals1')
-        self.rewards = tf.placeholder(tf.float32, shape=(None, 1), name='rewards')
-        self.actions = tf.placeholder(tf.float32, shape=(None,) + action_shape, name='actions')
-        self.critic_target = tf.placeholder(tf.float32, shape=(None, 1), name='critic_target')
-        self.param_noise_stddev = tf.placeholder(tf.float32, shape=(), name='param_noise_stddev')
-
-        # Parameters.
-        self.gamma = gamma
-        self.tau = tau
-        self.memory = memory
-        self.normalize_observations = normalize_observations
-        self.normalize_returns = normalize_returns
-        self.action_noise = action_noise
-        self.param_noise = param_noise
-        self.action_range = action_range
-        self.return_range = return_range
-        self.observation_range = observation_range
-        self.critic = critic
-        self.actor = actor
-        self.actor_lr = actor_lr
-        self.critic_lr = critic_lr
-        self.clip_norm = clip_norm
-        self.enable_popart = enable_popart
-        self.reward_scale = reward_scale
-        self.batch_size = batch_size
-        self.stats_sample = None
-        self.critic_l2_reg = critic_l2_reg
-
-        # Observation normalization.
-        if self.normalize_observations:
-            with tf.variable_scope('agent_%d/obs_rms' % id):
-                self.obs_rms = RunningMeanStd(shape=observation_shape)
-        else:
-            self.obs_rms = None
-        normalized_obs0 = tf.clip_by_value(normalize(self.obs0, self.obs_rms),
-                                           self.observation_range[0], self.observation_range[1])
-        normalized_obs1 = tf.clip_by_value(normalize(self.obs1, self.obs_rms),
-                                           self.observation_range[0], self.observation_range[1])
-
-        # Return normalization.
-        if self.normalize_returns:
-            with tf.variable_scope('agent_%d/ret_rms' % id):
-                self.ret_rms = RunningMeanStd()
-        else:
-            self.ret_rms = None
-
-        # Create target networks.
-        target_actor = copy(actor)
-        target_actor.name = 'target_actor'
-        self.target_actor = target_actor
-        target_critic = copy(critic)
-        target_critic.name = 'target_critic'
-        self.target_critic = target_critic
-
-        # Create networks and core TF parts that are shared across setup parts.
-        self.actor_tf = actor(normalized_obs0)
-        self.normalized_critic_tf = critic(normalized_obs0, self.actions)
-        self.critic_tf = denormalize(
-            tf.clip_by_value(self.normalized_critic_tf, self.return_range[0], self.return_range[1]), self.ret_rms)
-        self.normalized_critic_with_actor_tf = critic(normalized_obs0, self.actor_tf, reuse=True)
-        self.critic_with_actor_tf = denormalize(
-            tf.clip_by_value(self.normalized_critic_with_actor_tf, self.return_range[0], self.return_range[1]),
-            self.ret_rms)
-        Q_obs1 = denormalize(target_critic(normalized_obs1, target_actor(normalized_obs1)), self.ret_rms)
-        self.target_Q = self.rewards + (1. - self.terminals1) * gamma * Q_obs1
-
-        # Set up parts.
-        if self.param_noise is not None:
-            self.setup_param_noise(normalized_obs0)
-        self.setup_actor_optimizer()
-        self.setup_critic_optimizer()
-        if self.normalize_returns and self.enable_popart:
-            self.setup_popart()
-        self.setup_stats()
-        self.setup_target_network_updates()
-
-        self.initial_state = None  # recurrent architectures not supported yet
-
-        self.id = id
-
-    def obs_rms_update(self, obs0):
-        if self.normalize_observations:
-            self.obs_rms.update(np.array([obs0]))
 
 
 class MADDPG(object):
@@ -202,8 +44,11 @@ class MADDPG(object):
         # self.sess_n = [U.single_threaded_session() for _ in self.agents]
 
     def train(self):
-        for agent in self.agents:
-            agent.train()
+        cl = np.zeros(self.n)
+        al = np.zeros(self.n)
+        for i, agent in enumerate(self.agents):
+            cl[i], al[i] = agent.train()
+        return cl, al
 
     def step(self, obs_n, apply_noise=True, compute_Q=True):
         action_n = []
