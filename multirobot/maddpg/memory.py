@@ -49,7 +49,7 @@ class Memory(object):
         self.terminals1 = RingBuffer(limit, shape=terminal_shape)
         self.observations1 = RingBuffer(limit, shape=observation_shape)
 
-    def sample(self, batch_size):
+    def sample(self, batch_size, agent_id=None):
         # Draw such that we always have a proceeding element.
         batch_idxs = np.random.randint(self.nb_entries - 2, size=batch_size)
 
@@ -59,13 +59,22 @@ class Memory(object):
         reward_batch = self.rewards.get_batch(batch_idxs)
         terminal1_batch = self.terminals1.get_batch(batch_idxs)
 
-        result = {
-            'obs0': array_min2d(obs0_batch),
-            'obs1': array_min2d(obs1_batch),
-            'rewards': array_min2d(reward_batch),
-            'actions': array_min2d(action_batch),
-            'terminals1': array_min2d(terminal1_batch),
-        }
+        if agent_id is None:
+            result = {
+                'obs0': array_min2d(obs0_batch),
+                'obs1': array_min2d(obs1_batch),
+                'rewards': array_min2d(reward_batch),
+                'actions': array_min2d(action_batch),
+                'terminals1': array_min2d(terminal1_batch),
+            }
+        else:
+            result={
+                'obs0': array_min2d(obs0_batch),
+                'obs1': array_min2d(obs1_batch),
+                'rewards': array_min2d(reward_batch),
+                'actions': array_min2d(action_batch),
+                'terminals1': array_min2d(terminal1_batch),
+            }
         return result
 
     def append(self, obs0, action, reward, obs1, terminal1, training=True):
