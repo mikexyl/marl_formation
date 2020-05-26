@@ -14,15 +14,21 @@ class DdpgEnv(GymEnv):
             self.action_space = maddpg_env.action_space
             self.observation_space = maddpg_env.observation_space
             self.n = self.maddpg_env.n
-            self.action_space_n_shape = maddpg_env.action_space[0].shape[-1] * self.n
-            self.observation_space_n_shape = maddpg_env.observation_space[0].shape[-1] * self.n
+            # self.action_space_n_shape = np.zeros(maddpg_env.action_space[0].shape[-1]*self.n,)
+            # self.observation_space_n_shape = (maddpg_env.observation_space[0].shape[-1] * self.n,)
+            self.action_space_n_shape = (self.n, maddpg_env.action_space[0].shape[-1])
+            self.observation_space_n_shape = (self.n, maddpg_env.observation_space[0].shape[-1])
+            self.reward_shape = (self.n, 1)
+            self.terminal_shape = (self.n, 1)
 
     def step(self, action_n):
         action_n = [action.reshape(2) for action in action_n]
         obs_n, rew_n, done_n, info_n = self.maddpg_env.step(action_n)
-        if done_n[0]:
-            pass
-        return self.obs_reshape(obs_n), np.array(rew_n), np.array(done_n), np.array(info_n)
+        obs_n = self.obs_reshape(obs_n)
+        rew_n = np.vstack(rew_n)
+        done_n = np.vstack(done_n)
+        info_n = np.vstack(info_n)
+        return obs_n, rew_n, done_n, info_n
 
     def reset(self):
         obs_n = self.maddpg_env.reset()

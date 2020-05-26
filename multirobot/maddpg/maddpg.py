@@ -5,7 +5,6 @@ import pickle
 
 from baselines.ddpg.ddpg_learner import DDPG
 from baselines.ddpg.models import Actor, Critic
-from baselines.ddpg.memory import Memory
 from baselines.ddpg.noise import AdaptiveParamNoiseSpec, NormalActionNoise, OrnsteinUhlenbeckActionNoise
 from baselines.common import set_global_seeds
 import baselines.common.tf_util as U
@@ -13,6 +12,7 @@ import baselines.common.tf_util as U
 from baselines import logger
 import numpy as np
 from multirobot.maddpg.maddpg_learner import MADDPG
+from multirobot.maddpg.memory import Memory
 
 try:
     from mpi4py import MPI
@@ -64,7 +64,8 @@ def learn(network, env,
                      env.action_space]).all()  # we assume symmetric actions.
 
     memory = Memory(limit=int(1e6), action_shape=env.action_space_n_shape,
-                    observation_shape=env.observation_space_n_shape)
+                    observation_shape=env.observation_space_n_shape, reward_shape=env.reward_shape,
+                    terminal_shape=env.terminal_shape)
     critic_n = [Critic(network=network, **network_kwargs) for _ in range(env.n)] if not shared_critic else [
         Critic(network=network, **network_kwargs)]
     actor_n = [Actor(nb_actions_n[i], network=network, **network_kwargs) for i in range(env.n)]
@@ -81,25 +82,28 @@ def learn(network, env,
                 param_noise_n = [
                     AdaptiveParamNoiseSpec(initial_stddev=float(stddev), desired_action_stddev=float(stddev)) for _ in
                     range(env.n)]
+                action_noise_n = [None for _ in range(env.n)]
             elif 'normal' in current_noise_type:
                 _, stddev = current_noise_type.split('_')
+                param_noise_n = [None for _ in range(env.n)]
                 action_noise_n = [NormalActionNoise(mu=np.zeros(nb_actions), sigma=float(stddev) * np.ones(nb_actions))
                                   for nb_actions in nb_actions_n]
             elif 'ou' in current_noise_type:
                 _, stddev = current_noise_type.split('_')
+                param_noise_n = [None for _ in range(env.n)]
                 action_noise_n = [OrnsteinUhlenbeckActionNoise(mu=np.zeros(nb_actions),
                                                                sigma=float(stddev) * np.ones(nb_actions)) for nb_actions
                                   in nb_actions_n]
             else:
                 raise RuntimeError('unknown noise type "{}"'.format(current_noise_type))
 
-    max_action = env.action_space.high
-    logger.info('scaling actions by {} before executing in env'.format(max_action))
+    max_action_n = [action_space.high for action_space in env.action_space]
+    logger.info('scaling actions by {} before executing in env'.format(max_action_n))
 
-    agent = MADDPG(actor_n, critic_n, memory, env.observation_space.shape, env.action_space.shape,
+    agent = MADDPG(actor_n, critic_n, memory, env.observation_space, env.action_space,
                    gamma=gamma, tau=tau, normalize_returns=normalize_returns,
                    normalize_observations=normalize_observations,
-                   batch_size=batch_size, action_noise=action_noise_n, param_noise=param_noise_n,
+                   batch_size=batch_size, action_noise_n=action_noise_n, param_noise_n=param_noise_n,
                    critic_l2_reg=critic_l2_reg,
                    actor_lr=actor_lr, critic_lr=critic_lr, enable_popart=popart, clip_norm=clip_norm,
                    reward_scale=reward_scale, shared_critic=shared_critic)
@@ -109,20 +113,20 @@ def learn(network, env,
 
     eval_episode_rewards_history = deque(maxlen=100)
     episode_rewards_history = deque(maxlen=100)
-    sess = U.get_session()
+    # sess = U.get_session()
     # Prepare everything.
-    agent.initialize(sess)
-    sess.graph.finalize()
+    agent.initialize()
+    # sess.graph.finalize()
 
     agent.reset()
 
     obs = env.reset()
     if eval_env is not None:
         eval_obs = eval_env.reset()
-    nenvs = obs.shape[0]
+    nveh = obs.shape[0]
 
-    episode_reward = np.zeros(nenvs, dtype=np.float32)  # vector
-    episode_step = np.zeros(nenvs, dtype=int)  # vector
+    episode_reward = np.zeros((nveh,1), dtype=np.float32)  # vector
+    episode_step = np.zeros(nveh, dtype=int)  # vector
     episodes = 0  # scalar
     t = 0  # scalar
 
@@ -138,21 +142,22 @@ def learn(network, env,
     for epoch in range(nb_epochs):
         for cycle in range(nb_epoch_cycles):
             # Perform rollouts.
-            if nenvs > 1:
+            if nveh > 1:
                 # if simulating multiple envs in parallel, impossible to reset agent at the end of the episode in each
                 # of the environments, so resetting here instead
                 agent.reset()
             for t_rollout in range(nb_rollout_steps):
                 # Predict next action.
-                action, q, _, _ = agent.step(obs, apply_noise=True, compute_Q=True)
+                action_n, q_n, _, _ = agent.step(obs, apply_noise=True, compute_Q=True)
 
                 # Execute next action.
                 if rank == 0 and render:
                     env.render()
 
                 # max_action is of dimension A, whereas action is dimension (nenvs, A) - the multiplication gets broadcasted to the batch
+                # todo max_action not scale yet
                 new_obs, r, done, info = env.step(
-                    max_action * action)  # scale for execution in env (as far as DDPG is concerned, every action is in [-1, 1])
+                    action_n)  # scale for execution in env (as far as DDPG is concerned, every action is in [-1, 1])
                 # note these outputs are batched from vecenv
 
                 t += 1
@@ -162,9 +167,9 @@ def learn(network, env,
                 episode_step += 1
 
                 # Book-keeping.
-                epoch_actions.append(action)
-                epoch_qs.append(q)
-                agent.store_transition(obs, action, r, new_obs,
+                epoch_actions.append(action_n)
+                epoch_qs.append(q_n)
+                agent.store_transition(obs, action_n, r, new_obs,
                                        done)  # the batched data will be unrolled in memory.py's append.
 
                 obs = new_obs
@@ -179,7 +184,7 @@ def learn(network, env,
                         episode_step[d] = 0
                         epoch_episodes += 1
                         episodes += 1
-                        if nenvs == 1:
+                        if nveh == 1:
                             agent.reset()
 
             # Train.
@@ -206,7 +211,7 @@ def learn(network, env,
                 for t_rollout in range(nb_eval_steps):
                     eval_action, eval_q, _, _ = agent.step(eval_obs, apply_noise=False, compute_Q=True)
                     eval_obs, eval_r, eval_done, eval_info = eval_env.step(
-                        max_action * eval_action)  # scale for execution in env (as far as DDPG is concerned, every action is in [-1, 1])
+                        max_action_n * eval_action)  # scale for execution in env (as far as DDPG is concerned, every action is in [-1, 1])
                     if render_eval:
                         eval_env.render()
                     eval_episode_reward += eval_r
