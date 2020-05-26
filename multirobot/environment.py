@@ -12,10 +12,11 @@ def make_env(scenario_name, arglist, benchmark=False):
     # create multiagent environment
     if benchmark:
         env = MultiAgentEnv(world, scenario.reset_world, scenario.reward, scenario.observation, scenario.benchmark_data,
-                            scenario.done, True)
+                            scenario.done, True, reset_vehicle_callback=scenario.reset_vehicles)
     else:
         env = MultiAgentEnv(world, scenario.reset_world, scenario.reward, scenario.observation,
-                            done_callback=scenario.done, shared_viewer=True)
+                            done_callback=scenario.done, shared_viewer=True,
+                            reset_vehicle_callback=scenario.reset_vehicles)
         # env = MultiAgentEnv(world, scenario.reset_world, scenario.reward, scenario.observation,
         #                     done_callback=scenario.done, shared_viewer=True)
     return env
@@ -25,7 +26,7 @@ def make_env(scenario_name, arglist, benchmark=False):
 class MultiAgentEnv(maenv.MultiAgentEnv):
     def __init__(self, world, reset_callback=None, reward_callback=None,
                  observation_callback=None, info_callback=None,
-                 done_callback=None, shared_viewer=True):
+                 done_callback=None, shared_viewer=True, reset_vehicle_callback=None):
         super(MultiAgentEnv, self).__init__(world, reset_callback, reward_callback, observation_callback,
                                             info_callback,
                                             done_callback, shared_viewer)
@@ -66,6 +67,8 @@ class MultiAgentEnv(maenv.MultiAgentEnv):
                 self.action_space.append(act_space)
             else:
                 self.action_space.append(total_action_space[0])
+
+            self.reset_vehicle_callback = reset_vehicle_callback
 
     # override to show the entire environment
     def render(self, mode='human'):
@@ -196,3 +199,6 @@ class MultiAgentEnv(maenv.MultiAgentEnv):
 
             # make sure we used all elements of action
         assert len(action) == 0
+
+    def reset_vehicle(self, vehicle_id=None):
+        self.reset_vehicle_callback(self.world, vehicle_id)

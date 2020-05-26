@@ -25,14 +25,14 @@ class Scenario(BaseScenario):
         super(Scenario, self).__init__()
 
         self.eps_form = 0.1
-        self.eps_goal = 1
+        self.eps_goal = 0.5
 
-        self.rew_form_ratio = -1
-        self.rew_goal_ratio = 1
+        self.rew_form_ratio = -1.
+        self.rew_goal_ratio = 1.
 
         self.rew_edge = 0.1
-        self.rew_success = 50
-        self.rew_collision = -100
+        self.rew_success = 50.
+        self.rew_collision = -100.
         self.rew_penalty = -0.1
 
         self.benchmark = Benchmark()
@@ -42,7 +42,7 @@ class Scenario(BaseScenario):
 
         # set any world properties first
         world.dim_c = 2
-        num_vehicles = 2
+        num_vehicles = 3
         num_agents = 0
         world.num_agents = num_agents
         world.num_vehicles = num_vehicles
@@ -143,18 +143,25 @@ class Scenario(BaseScenario):
         # world.goal_landmark.state.p_pos = np.random.uniform(-1, world.size_x - 1, world.dim_p)
         world.goal_landmark.state.p_pos = np.array([1, 1])
 
-    @staticmethod
-    def reset_vehicles(world):
-        # start point set as centroid at (1.5,1.5)
-        # todo make it an option to choose start point
+    def reset_vehicles(self, world, vehicle_id=None):
         radius = np.array([0, world.radius])
         alpha = math.pi * 2 / world.num_vehicles
-        for i, vehicle in enumerate(world.vehicles):
-            vehicle.state.p_pos = world.centroid + radius.dot(
-                np.array([(math.cos(alpha * i), math.sin(alpha * i)), (math.sin(alpha * i), math.cos(alpha * i))]))
-            vehicle.state.p_vel = np.zeros(world.dim_p)
-            vehicle.state.p_ang = math.pi / 2
-            vehicle.state.c = np.zeros(world.dim_c)
+        if vehicle_id is None:
+            # start point set as centroid at (1.5,1.5)
+            # todo make it an option to choose start point
+            for i, vehicle in enumerate(world.vehicles):
+                vehicle.state.p_pos = world.centroid + radius.dot(
+                    np.array([(math.cos(alpha * i), math.sin(alpha * i)), (math.sin(alpha * i), math.cos(alpha * i))]))
+                vehicle.state.p_vel = np.zeros(world.dim_p)
+                vehicle.state.p_ang = math.pi / 2
+                vehicle.state.c = np.zeros(world.dim_c)
+        else:
+            world.vehicles[vehicle_id].state.p_pos = world.centroid + radius.dot(
+                np.array([(math.cos(alpha * vehicle_id), math.sin(alpha * vehicle_id)),
+                          (math.sin(alpha * vehicle_id), math.cos(alpha * vehicle_id))]))
+            world.vehicles[vehicle_id].state.p_vel = np.zeros(world.dim_p)
+            world.vehicles[vehicle_id].state.p_ang = math.pi / 2
+            world.vehicles[vehicle_id].state.c = np.zeros(world.dim_c)
 
     def reward(self, agent, world):
         cf, _ = self.formation_reward(agent, world)
@@ -169,8 +176,8 @@ class Scenario(BaseScenario):
         else:
             if cl:
                 rew_total += self.rew_collision
-            if cs:
-                rew_total += rew_success
+
+            rew_total += rew_success
         if not rew_total == 0:
             return rew_total
         else:
@@ -212,8 +219,12 @@ class Scenario(BaseScenario):
         #     return True, rew
         # else:
         #     return False, 0
-        return True, (1 - (agent.dist_to_goal - self.eps_goal) / (
-                2 * world.size_x - self.eps_goal)) * self.rew_success * 0.05
+        if agent.dist_to_goal < self.eps_goal:
+            agent.is_success = True
+            return True, self.rew_success
+        else:
+            return False, -((agent.dist_to_goal - self.eps_goal) / (
+                    2 * world.size_x - self.eps_goal)) * self.rew_success * 0.01
 
     def collision_reward(self, agent, world):
         if util.collision_check(agent, world) or agent.is_stuck:
@@ -304,7 +315,7 @@ class Scenario(BaseScenario):
         # if agent.goal_obs:
         #     return True
         # return False
-        return agent.is_stuck
+        return any([agent.is_stuck, agent.is_success])
         # return util.collision_check(agent, world)
         # todo collision not check here
         # check if collision

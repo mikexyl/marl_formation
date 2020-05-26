@@ -1,16 +1,14 @@
 import os
+import pickle
 import time
 from collections import deque
-import pickle
 
-from baselines.ddpg.ddpg_learner import DDPG
+import numpy as np
+from baselines import logger
+from baselines.common import set_global_seeds
 from baselines.ddpg.models import Actor, Critic
 from baselines.ddpg.noise import AdaptiveParamNoiseSpec, NormalActionNoise, OrnsteinUhlenbeckActionNoise
-from baselines.common import set_global_seeds
-import baselines.common.tf_util as U
 
-from baselines import logger
-import numpy as np
 from multirobot.maddpg.maddpg_learner import MADDPG
 from multirobot.maddpg.memory import Memory
 
@@ -112,7 +110,7 @@ def learn(network, env,
     logger.info(str(agent.__dict__.items()))
 
     eval_episode_rewards_history = deque(maxlen=100)
-    episode_rewards_history = deque(maxlen=100)
+    episode_rewards_history = [deque(maxlen=100) for _ in range(env.n)]
     # sess = U.get_session()
     # Prepare everything.
     agent.initialize()
@@ -125,7 +123,7 @@ def learn(network, env,
         eval_obs = eval_env.reset()
     nveh = obs.shape[0]
 
-    episode_reward = np.zeros((nveh,1), dtype=np.float32)  # vector
+    episode_reward = np.zeros((nveh, 1), dtype=np.float32)  # vector
     episode_step = np.zeros(nveh, dtype=int)  # vector
     episodes = 0  # scalar
     t = 0  # scalar
@@ -134,18 +132,20 @@ def learn(network, env,
 
     start_time = time.time()
 
-    epoch_episode_rewards = []
-    epoch_episode_steps = []
-    epoch_actions = []
-    epoch_qs = []
+    epoch_episode_rewards = [[] for _ in range(env.n)]
+    epoch_episode_steps = [[] for _ in range(env.n)]
+    epoch_actions = [[] for _ in range(env.n)]
+    epoch_qs = [[] for _ in range(env.n)]
     epoch_episodes = 0
     for epoch in range(nb_epochs):
         for cycle in range(nb_epoch_cycles):
+            from glog import info
+            info("epoch %d, cycle %d" % (epoch, cycle))
             # Perform rollouts.
-            if nveh > 1:
-                # if simulating multiple envs in parallel, impossible to reset agent at the end of the episode in each
-                # of the environments, so resetting here instead
-                agent.reset()
+            # if nveh > 1:
+            #     # if simulating multiple envs in parallel, impossible to reset agent at the end of the episode in each
+            #     # of the environments, so resetting here instead
+            #     agent.reset()
             for t_rollout in range(nb_rollout_steps):
                 # Predict next action.
                 action_n, q_n, _, _ = agent.step(obs, apply_noise=True, compute_Q=True)
@@ -167,8 +167,9 @@ def learn(network, env,
                 episode_step += 1
 
                 # Book-keeping.
-                epoch_actions.append(action_n)
-                epoch_qs.append(q_n)
+                for i in range(env.n):
+                    epoch_actions[i].append(action_n[i])
+                    epoch_qs[i].append(q_n[i])
                 agent.store_transition(obs, action_n, r, new_obs,
                                        done)  # the batched data will be unrolled in memory.py's append.
 
@@ -177,15 +178,15 @@ def learn(network, env,
                 for d in range(len(done)):
                     if done[d]:
                         # Episode done.
-                        epoch_episode_rewards.append(episode_reward[d])
-                        episode_rewards_history.append(episode_reward[d])
-                        epoch_episode_steps.append(episode_step[d])
+                        epoch_episode_rewards[d].append(episode_reward[d][0])
+                        episode_rewards_history[d].append(episode_reward[d][0])
+                        epoch_episode_steps[d].append(episode_step[d])
                         episode_reward[d] = 0.
                         episode_step[d] = 0
                         epoch_episodes += 1
                         episodes += 1
-                        if nveh == 1:
-                            agent.reset()
+                        agent.reset(d)
+                        env.reset_vehicle(d)
 
             # Train.
             epoch_actor_losses = []
@@ -231,23 +232,30 @@ def learn(network, env,
         # Log stats.
         # XXX shouldn't call np.mean on variable length lists
         duration = time.time() - start_time
-        stats = agent.get_stats()
-        combined_stats = stats.copy()
-        combined_stats['rollout/return'] = np.mean(epoch_episode_rewards)
-        combined_stats['rollout/return_std'] = np.std(epoch_episode_rewards)
-        combined_stats['rollout/return_history'] = np.mean(episode_rewards_history)
-        combined_stats['rollout/return_history_std'] = np.std(episode_rewards_history)
-        combined_stats['rollout/episode_steps'] = np.mean(epoch_episode_steps)
-        combined_stats['rollout/actions_mean'] = np.mean(epoch_actions)
-        combined_stats['rollout/Q_mean'] = np.mean(epoch_qs)
-        combined_stats['train/loss_actor'] = np.mean(epoch_actor_losses)
-        combined_stats['train/loss_critic'] = np.mean(epoch_critic_losses)
-        combined_stats['train/param_noise_distance'] = np.mean(epoch_adaptive_distances)
+
+        # todo not record agent stats here
+        # stats = agent.get_stats()
+        # combined_stats = stats.copy()
+        # todo simplified log
+        combined_stats = {}
+        combined_stats['rollout/return'] = np.array(
+            [np.mean(epoch_episode_rewards[0]), np.mean(epoch_episode_rewards[1])])
+        combined_stats['rollout/return_std'] = np.array(
+            [np.std(epoch_episode_rewards[0]), np.std(epoch_episode_rewards[1])])
+        combined_stats['rollout/return_history'] = np.array(
+            [np.mean(episode_rewards_history[0]), np.mean(episode_rewards_history[1])])
+        combined_stats['rollout/return_history_std'] = np.array(
+            [np.std(episode_rewards_history[0]), np.std(episode_rewards_history[1])])
+        combined_stats['rollout/episode_steps'] = np.array(
+            [np.mean(epoch_episode_steps[0]), np.mean(epoch_episode_steps[1])])
+        combined_stats['rollout/Q_mean'] = np.array(
+            [np.mean(epoch_qs[0]), np.mean(epoch_qs[1])])
         combined_stats['total/duration'] = duration
         combined_stats['total/steps_per_second'] = float(t) / float(duration)
         combined_stats['total/episodes'] = episodes
         combined_stats['rollout/episodes'] = epoch_episodes
-        combined_stats['rollout/actions_std'] = np.std(epoch_actions)
+        combined_stats['rollout/actions_mean'] = np.array(
+            [np.mean(epoch_actions[0]), np.mean(epoch_actions[1])])
         # Evaluation statistics.
         if eval_env is not None:
             combined_stats['eval/return'] = eval_episode_rewards
@@ -264,7 +272,8 @@ def learn(network, env,
             else:
                 raise ValueError('expected scalar, got %s' % x)
 
-        combined_stats_sums = np.array([np.array(x).flatten()[0] for x in combined_stats.values()])
+        # todo now only log mean reward
+        combined_stats_sums = np.array([np.array(x).flatten().mean() for x in combined_stats.values()])
         if MPI is not None:
             combined_stats_sums = MPI.COMM_WORLD.allreduce(combined_stats_sums)
 

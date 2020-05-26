@@ -34,6 +34,9 @@ class DdpgEnv(GymEnv):
         obs_n = self.maddpg_env.reset()
         return self.obs_reshape(obs_n)
 
+    def reset_vehicle(self, agent_id=None):
+        self.maddpg_env.reset_vehicle(agent_id)
+
     def render(self, mode='human'):
         self.maddpg_env.render()
 

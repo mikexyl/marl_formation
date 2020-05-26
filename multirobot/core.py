@@ -49,8 +49,8 @@ class Vehicle(macore.Agent):
         super(Vehicle, self).__init__()
         self.id = 0
 
-        self.max_vel_x = 1
-        self.max_vel_y = 1
+        self.max_vel_x = 3
+        self.max_vel_y = 3
         self.max_vel_ang = math.pi
         self.state = VehicleState()
         self.action = VehicleAction()
@@ -65,6 +65,7 @@ class Vehicle(macore.Agent):
 
         self.is_stuck = False
         self.dist_to_goal = None
+        self.is_success=False
 
     # a minimised vehicle model
     # todo a better model
