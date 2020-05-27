@@ -69,7 +69,7 @@ def get_perturbed_actor_updates(actor, perturbed_actor, param_noise_stddev):
 
 
 class Agent(object):
-    def __init__(self, actor, critic, memory, observation_shape, action_shape, param_noise=None, action_noise=None,
+    def __init__(self, actor, critic, memory, observation_shape, action_shape, observation_shape_n, action_shape_n,param_noise=None, action_noise=None,
                  gamma=0.99, tau=0.001, normalize_returns=False, enable_popart=False, normalize_observations=True,
                  batch_size=128, observation_range=(-5., 5.), action_range=(-1., 1.),
                  return_range=(-np.inf, np.inf),
@@ -85,6 +85,10 @@ class Agent(object):
         self.actions = tf.placeholder(tf.float32, shape=(None,) + action_shape, name='actions')
         self.critic_target = tf.placeholder(tf.float32, shape=(None, 1), name='critic_target')
         self.param_noise_stddev = tf.placeholder(tf.float32, shape=(), name='param_noise_stddev')
+
+        self.obs0_n = tf.placeholder(tf.float32, shape=(None,) + observation_shape_n, name='obs0_n')
+        self.obs1_n = tf.placeholder(tf.float32, shape=(None,) + observation_shape_n, name='obs0_n')
+        self.actions_n = tf.placeholder(tf.float32, shape=(None,) + action_shape_n, name='actions_n')
 
         # Parameters.
         self.gamma = gamma
@@ -314,7 +318,7 @@ class Agent(object):
         if self.normalize_returns and self.enable_popart:
             old_mean, old_std, target_Q = self.sess.run([self.ret_rms.mean, self.ret_rms.std, self.target_Q],
                                                         feed_dict={
-                                                            self.obs1: batch['obs1'],
+                                                            self.obs1_n: batch['obs1_n'],
                                                             self.rewards: batch['rewards'],
                                                             self.terminals1: batch['terminals1'].astype('float32'),
                                                         })
@@ -335,7 +339,7 @@ class Agent(object):
             # assert (np.abs(target_Q - target_Q_new) < 1e-3).all()
         else:
             target_Q = self.sess.run(self.target_Q, feed_dict={
-                self.obs1: batch['obs1'],
+                self.obs1_n: batch['obs1_n'],
                 self.rewards: batch['rewards'],
                 self.terminals1: batch['terminals1'].astype('float32'),
             })
@@ -343,8 +347,8 @@ class Agent(object):
         # Get all gradients and perform a synced update.
         ops = [self.actor_grads, self.actor_loss, self.critic_grads, self.critic_loss]
         actor_grads, actor_loss, critic_grads, critic_loss = self.sess.run(ops, feed_dict={
-            self.obs0: batch['obs0'],
-            self.actions: batch['actions'],
+            self.obs0_n: batch['obs0_n'],
+            self.actions_n: batch['actions_n'],
             self.critic_target: target_Q,
         })
         self.actor_optimizer.update(actor_grads, stepsize=self.actor_lr)

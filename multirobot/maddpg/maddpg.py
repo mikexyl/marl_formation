@@ -98,7 +98,8 @@ def learn(network, env,
     max_action_n = [action_space.high for action_space in env.action_space]
     logger.info('scaling actions by {} before executing in env'.format(max_action_n))
 
-    agent = MADDPG(actor_n, critic_n, memory, env.observation_space, env.action_space,
+    agent = MADDPG(actor_n, critic_n, memory, env.observation_space, env.action_space, env.observation_space_n_shape,
+                   env.action_space_n_shape,
                    gamma=gamma, tau=tau, normalize_returns=normalize_returns,
                    normalize_observations=normalize_observations,
                    batch_size=batch_size, action_noise_n=action_noise_n, param_noise_n=param_noise_n,

@@ -11,7 +11,8 @@ except ImportError:
 
 class MADDPG(object):
 
-    def __init__(self, actor_n, critic_n, memory, observation_shape, action_shape, param_noise_n=None,
+    def __init__(self, actor_n, critic_n, memory, observation_shape, action_shape, observation_shape_n, action_shape_n,
+                 param_noise_n=None,
                  action_noise_n=None,
                  gamma=0.99, tau=0.001, normalize_returns=False, enable_popart=False, normalize_observations=True,
                  batch_size=128, observation_range=(-5., 5.), action_range=(-1., 1.),
@@ -27,19 +28,23 @@ class MADDPG(object):
         if shared_critic:
             for i, (actor, param_noise, action_noise, obs_shape, act_shape) in enumerate(
                     zip(actor_n, param_noise_n, action_noise_n, observation_shape, action_shape)):
-                self.agents.append(Agent(actor, critic_n[0], memory, obs_shape.shape, act_shape.shape, param_noise,
-                                         action_noise,
-                                         gamma, tau, normalize_returns, enable_popart, normalize_observations,
-                                         batch_size, observation_range, action_range, return_range, critic_l2_reg,
-                                         actor_lr, critic_lr, clip_norm, reward_scale, id=i))
+                self.agents.append(
+                    Agent(actor, critic_n[0], memory, obs_shape.shape, act_shape.shape, observation_shape_n,
+                          action_shape_n, param_noise,
+                          action_noise,
+                          gamma, tau, normalize_returns, enable_popart, normalize_observations,
+                          batch_size, observation_range, action_range, return_range, critic_l2_reg,
+                          actor_lr, critic_lr, clip_norm, reward_scale, id=i))
         else:
             for i, (actor, critic, param_noise, action_noise, obs_shape, act_shape) in enumerate(
                     zip(actor_n, critic_n, param_noise_n, action_noise_n, observation_shape, action_shape)):
-                self.agents.append(Agent(actor, critic, memory, obs_shape.shape, act_shape.shape, param_noise,
-                                         action_noise,
-                                         gamma, tau, normalize_returns, enable_popart, normalize_observations,
-                                         batch_size, observation_range, action_range, return_range, critic_l2_reg,
-                                         actor_lr, critic_lr, clip_norm, reward_scale, id=i))
+                self.agents.append(
+                    Agent(actor, critic, memory, obs_shape.shape, act_shape.shape, observation_shape_n, action_shape_n,
+                          param_noise,
+                          action_noise,
+                          gamma, tau, normalize_returns, enable_popart, normalize_observations,
+                          batch_size, observation_range, action_range, return_range, critic_l2_reg,
+                          actor_lr, critic_lr, clip_norm, reward_scale, id=i))
 
         # self.sess_n = [U.single_threaded_session() for _ in self.agents]
 
