@@ -323,3 +323,12 @@ class Scenario(BaseScenario):
 
     def benchmark_data(self, agent, world):
         return 0
+
+    def load_from(self, file):
+        raise NotImplementedError
+
+    def save_to(self, file):
+        raise NotImplementedError
+
+    def load_seed(self, seed):
+        raise NotImplementedError
