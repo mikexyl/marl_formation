@@ -8,7 +8,8 @@ from multiagent.scenario import BaseScenario
 from multirobot import util
 from multirobot.core import World, Vehicle
 
-
+from ruamel import yaml
+import os
 class Benchmark(object):
     def __init__(self):
         self.stat_rew_condition = np.zeros(3)
@@ -130,6 +131,28 @@ class Scenario(BaseScenario):
         self.reset_world(world)
 
         return world
+
+    def save(self,world):
+        P_posdict = dict()
+        for i in range(0,50):
+            x_pos = float(world.entities[i].state.p_pos[0])
+            y_pos = float(world.entities[i].state.p_pos[1])
+            P_posdict['landmark_'+str(i)] = [x_pos,y_pos]
+        curpath = os.path.dirname(os.path.realpath(__file__))
+        yamlpath = os.path.join(curpath, "scenario_P_pos.yaml")
+        with open(yamlpath, "w", encoding="utf-8") as f:
+            yaml.dump(P_posdict, f )
+        # print(P_posdict['landmark_35'])
+        # print(P_posdict)
+
+    def load(self,file_path,world):
+        P_posdict = yaml.safe_load(open(file_path, 'r'))
+        # print(type(P_posdict))
+        # print(P_posdict)
+        for j in range(0,50):
+            world.entities[j].state.p_pos = a = P_posdict['landmark_'+str(j)]
+
+
 
     # todo set a arg to choose random or fixed obstacles
     def reset_world(self, world):
@@ -299,6 +322,8 @@ class Scenario(BaseScenario):
 
         return obs.reshape(len(world.entities) * 2)
 
+
+
     def done(self, agent, world):
         # check if succeed
         # if agent.goal_obs:
@@ -312,3 +337,4 @@ class Scenario(BaseScenario):
 
     def benchmark_data(self, agent, world):
         return 0
+
