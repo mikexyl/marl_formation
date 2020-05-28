@@ -3,7 +3,7 @@ import argparse
 import numpy as np
 
 import multirobot.scenarios as scenarios
-from multirobot.environment import MultiAgentEnv
+from multirobot.environment import MultiAgentEnv, make_env
 
 import yaml
 import os
