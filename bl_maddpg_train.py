@@ -1,6 +1,6 @@
 from baselines import logger
 
-from multirobot.ddpg.environment import DdpgEnv
+from multirobot.maddpg.environment import BaseLinesEnv
 from multirobot.environment import make_env
 from multirobot.util import parse_args
 
@@ -20,7 +20,7 @@ def configure_logger(log_path, **kwargs):
 def train(arglist):
     # Create environment
     env = make_env(arglist.scenario, arglist, arglist.benchmark)
-    ddpg_env = DdpgEnv(env)
+    ddpg_env = BaseLinesEnv(env)
     from multirobot.maddpg.maddpg import learn
 
     if MPI is None or MPI.COMM_WORLD.Get_rank() == 0:

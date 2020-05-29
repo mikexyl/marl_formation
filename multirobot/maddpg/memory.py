@@ -59,6 +59,9 @@ class Memory(object):
         reward_batch = self.rewards.get_batch(batch_idxs)
         terminal1_batch = self.terminals1.get_batch(batch_idxs)
 
+        # obs0_n_batch = obs0_batch + action_batch
+        # obs1_n_batch = obs1_batch + action_batch
+
         if agent_id is None:
             result = {
                 'obs0': array_min2d(obs0_batch),
@@ -70,9 +73,12 @@ class Memory(object):
         else:
             result = {
                 'obs0': array_min2d(obs0_batch[:, agent_id]),
+                'obs0_n': array_min2d(obs0_batch),
                 'obs1': array_min2d(obs1_batch[:, agent_id]),
+                'obs1_n': array_min2d(obs0_batch),
                 'rewards': array_min2d(reward_batch[:, agent_id]),
                 'actions': array_min2d(action_batch[:, agent_id]),
+                'actions_n': array_min2d(action_batch),
                 'terminals1': array_min2d(terminal1_batch[:, agent_id]),
             }
         return result

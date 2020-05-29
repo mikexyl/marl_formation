@@ -149,6 +149,7 @@ def learn(network, env,
             #     agent.reset()
             for t_rollout in range(nb_rollout_steps):
                 # Predict next action.
+                #todo no compute Q for now
                 action_n, q_n, _, _ = agent.step(obs, apply_noise=True, compute_Q=True)
 
                 # Execute next action.

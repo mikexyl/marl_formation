@@ -9,32 +9,12 @@ from baselines import logger
 from baselines.common.mpi_adam import MpiAdam
 from baselines.common.mpi_running_mean_std import RunningMeanStd
 
+from multirobot.maddpg.util import normalize, denormalize, reduce_std, reduce_var
+
 try:
     from mpi4py import MPI
 except ImportError:
     MPI = None
-
-
-def normalize(x, stats):
-    if stats is None:
-        return x
-    return (x - stats.mean) / (stats.std + 1e-8)
-
-
-def denormalize(x, stats):
-    if stats is None:
-        return x
-    return x * stats.std + stats.mean
-
-
-def reduce_std(x, axis=None, keepdims=False):
-    return tf.sqrt(reduce_var(x, axis=axis, keepdims=keepdims))
-
-
-def reduce_var(x, axis=None, keepdims=False):
-    m = tf.reduce_mean(x, axis=axis, keepdims=True)
-    devs_squared = tf.square(x - m)
-    return tf.reduce_mean(devs_squared, axis=axis, keepdims=keepdims)
 
 
 def get_target_updates(vars, target_vars, tau):
@@ -69,7 +49,8 @@ def get_perturbed_actor_updates(actor, perturbed_actor, param_noise_stddev):
 
 
 class Agent(object):
-    def __init__(self, actor, critic, memory, observation_shape, action_shape, observation_shape_n, action_shape_n,param_noise=None, action_noise=None,
+    def __init__(self, actor, critic, memory, observation_shape, action_shape, observation_shape_n, action_shape_n,
+                 param_noise=None, action_noise=None,
                  gamma=0.99, tau=0.001, normalize_returns=False, enable_popart=False, normalize_observations=True,
                  batch_size=128, observation_range=(-5., 5.), action_range=(-1., 1.),
                  return_range=(-np.inf, np.inf),
@@ -123,6 +104,14 @@ class Agent(object):
         normalized_obs1 = tf.clip_by_value(normalize(self.obs1, self.obs_rms),
                                            self.observation_range[0], self.observation_range[1])
 
+        # todo normalization not supported yet
+        if self.normalize_observations:
+            raise NotImplementedError
+        normalized_obs0_n = tf.clip_by_value(normalize(self.obs0_n, self.obs_rms),
+                                             self.observation_range[0], self.observation_range[1])
+        normalized_obs1_n = tf.clip_by_value(normalize(self.obs1_n, self.obs_rms),
+                                             self.observation_range[0], self.observation_range[1])
+
         # Return normalization.
         if self.normalize_returns:
             with tf.variable_scope('agent_%d/ret_rms' % id):
@@ -134,20 +123,21 @@ class Agent(object):
         target_actor = copy(actor)
         target_actor.name = 'target_actor'
         self.target_actor = target_actor
+        self.target_actor_tf = self.target_actor(normalized_obs1)
         target_critic = copy(critic)
         target_critic.name = 'target_critic'
         self.target_critic = target_critic
 
         # Create networks and core TF parts that are shared across setup parts.
         self.actor_tf = actor(normalized_obs0)
-        self.normalized_critic_tf = critic(normalized_obs0, self.actions)
+        self.normalized_critic_tf = critic(normalized_obs0_n, self.actions_n)
         self.critic_tf = denormalize(
             tf.clip_by_value(self.normalized_critic_tf, self.return_range[0], self.return_range[1]), self.ret_rms)
-        self.normalized_critic_with_actor_tf = critic(normalized_obs0, self.actor_tf, reuse=True)
+        self.normalized_critic_with_actor_tf = critic(normalized_obs0_n, self.actions_n, reuse=True)
         self.critic_with_actor_tf = denormalize(
             tf.clip_by_value(self.normalized_critic_with_actor_tf, self.return_range[0], self.return_range[1]),
             self.ret_rms)
-        Q_obs1 = denormalize(target_critic(normalized_obs1, target_actor(normalized_obs1)), self.ret_rms)
+        Q_obs1 = denormalize(target_critic(normalized_obs1_n, self.actions_n), self.ret_rms)
         self.target_Q = self.rewards + (1. - self.terminals1) * gamma * Q_obs1
 
         # Set up parts.
@@ -302,6 +292,25 @@ class Agent(object):
 
         return action, q, None, None
 
+    def compute_Q(self, obs0_n, actions_n):
+        q = self.sess.run(self.critic_with_actor_tf, feed_dict={
+            self.obs0_n: U.adjust_shape(self.obs0_n, [obs0_n]),
+            self.actions_n: U.adjust_shape(self.actions_n, [actions_n])
+        })
+        return q[0,0]
+
+    def compute_actions(self, obs, apply_noise=False):
+        actions = self.sess.run(self.actor_tf, feed_dict={
+            self.obs0: obs
+        })
+        return actions
+
+    def compute_target_actions(self, obs1, apply_noise=False):
+        target_actions = self.sess.run(self.target_actor_tf, feed_dict={
+            self.obs1: obs1
+        })
+        return target_actions
+
     def store_transition(self, obs0, action, reward, obs1, terminal1):
         reward *= self.reward_scale
 
@@ -310,6 +319,14 @@ class Agent(object):
             self.memory.append(obs0[b], action[b], reward[b], obs1[b], terminal1[b])
             if self.normalize_observations:
                 self.obs_rms.update(np.array([obs0[b]]))
+
+    def compute_target_Q(self, obs1_n, actions_n, rewards, terminals1):
+        return self.sess.run(self.target_Q, feed_dict={
+            self.obs1_n: obs1_n,
+            self.actions_n: actions_n,
+            self.rewards: rewards,
+            self.terminals1: terminals1
+        })
 
     def train(self):
         # Get a batch.
@@ -340,6 +357,7 @@ class Agent(object):
         else:
             target_Q = self.sess.run(self.target_Q, feed_dict={
                 self.obs1_n: batch['obs1_n'],
+                self.obs1: batch['obs1'],
                 self.rewards: batch['rewards'],
                 self.terminals1: batch['terminals1'].astype('float32'),
             })
@@ -348,8 +366,22 @@ class Agent(object):
         ops = [self.actor_grads, self.actor_loss, self.critic_grads, self.critic_loss]
         actor_grads, actor_loss, critic_grads, critic_loss = self.sess.run(ops, feed_dict={
             self.obs0_n: batch['obs0_n'],
+            self.obs0: batch['obs0'],
+            self.actions: batch['actions'],
             self.actions_n: batch['actions_n'],
-            self.critic_target: target_Q,
+            self.critic_target: target_Q
+        })
+        self.actor_optimizer.update(actor_grads, stepsize=self.actor_lr)
+        self.critic_optimizer.update(critic_grads, stepsize=self.critic_lr)
+
+        return critic_loss, actor_loss
+
+    def get_grads_and_update(self, obs0_n, actions_n, target_Q):
+        ops = [self.actor_grads, self.actor_loss, self.critic_grads, self.critic_loss]
+        actor_grads, actor_loss, critic_grads, critic_loss = self.sess.run(ops, feed_dict={
+            self.obs0_n: obs0_n,
+            self.actions_n: actions_n,
+            self.critic_target: target_Q
         })
         self.actor_optimizer.update(actor_grads, stepsize=self.actor_lr)
         self.critic_optimizer.update(critic_grads, stepsize=self.critic_lr)

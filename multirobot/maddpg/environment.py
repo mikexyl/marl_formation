@@ -4,12 +4,12 @@ from multirobot.environment import MultiAgentEnv as MaddpgEnv
 import numpy as np
 
 
-class DdpgEnv(GymEnv):
+class BaseLinesEnv(GymEnv):
     def __init__(self, maddpg_env):
         if not isinstance(maddpg_env, MaddpgEnv):
             raise NotImplementedError
         else:
-            super(DdpgEnv, self).__init__()
+            super(BaseLinesEnv, self).__init__()
             self.maddpg_env = maddpg_env
             self.action_space = maddpg_env.action_space
             self.observation_space = maddpg_env.observation_space
@@ -17,7 +17,8 @@ class DdpgEnv(GymEnv):
             # self.action_space_n_shape = np.zeros(maddpg_env.action_space[0].shape[-1]*self.n,)
             # self.observation_space_n_shape = (maddpg_env.observation_space[0].shape[-1] * self.n,)
             self.action_space_n_shape = (self.n, maddpg_env.action_space[0].shape[-1])
-            self.observation_space_n_shape = (self.n, maddpg_env.observation_space[0].shape[-1])
+            self.observation_space_n_shape = (
+                self.n, maddpg_env.observation_space[0].shape[-1])
             self.reward_shape = (self.n, 1)
             self.terminal_shape = (self.n, 1)
 
