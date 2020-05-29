@@ -8,8 +8,9 @@ from multiagent.scenario import BaseScenario
 from multirobot import util
 from multirobot.core import World, Vehicle
 
-from ruamel import yaml
+import yaml
 import os
+
 class Benchmark(object):
     def __init__(self):
         self.stat_rew_condition = np.zeros(3)

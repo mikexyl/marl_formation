@@ -4,15 +4,13 @@ import numpy as np
 
 import multirobot.scenarios as scenarios
 from multirobot.environment import MultiAgentEnv, make_env
-
+from multirobot.util import parse_args
 import yaml
 import os
 
 if __name__ == '__main__':
     # parse arguments
-    parser = argparse.ArgumentParser(description=None)
-    parser.add_argument('-s', '--scenario', default='simple.py', help='Path of the scenario Python script.')
-    args = parser.parse_args()
+    args = parse_args()
 
     # load scenario from script
     scenario = scenarios.load(args.scenario).Scenario()
@@ -21,8 +19,8 @@ if __name__ == '__main__':
 
     # load the saved landmarks
     # scenario.save(world) -->used to save fixed landmarks
-    flie_path = '/home/zhonvsky/venv/marl_formation/multirobot/scenarios/scenario_P_pos.yaml'
-    scenario.load(flie_path,world)
+    if args.config_path is not None:
+       scenario.load(args.config_path,world)
 
     # create multiagent environment
     env = MultiAgentEnv(world, scenario.reset_world, scenario.reward, scenario.observation, info_callback=None,

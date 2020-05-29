@@ -139,5 +139,6 @@ def parse_args():
     parser.add_argument('--play', default=False, action='store_true')
 
     parser.add_argument("--debug-display", action="store_true", default=False)
+    parser.add_argument('--config_path', help='yaml to load env settings.', default=None, type=str)
 
     return parser.parse_args()
