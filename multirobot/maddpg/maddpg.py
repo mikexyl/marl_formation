@@ -61,7 +61,7 @@ def learn(network, env,
     assert np.array([(np.abs(action_space.low) == action_space.high) for action_space in
                      env.action_space]).all()  # we assume symmetric actions.
 
-    memory = Memory(limit=int(1e6), action_shape=env.action_space_n_shape,
+    memory = Memory(limit=int(1e5), action_shape=env.action_space_n_shape,
                     observation_shape=env.observation_space_n_shape, reward_shape=env.reward_shape,
                     terminal_shape=env.terminal_shape)
     critic_n = [Critic(network=network, **network_kwargs) for _ in range(env.n)] if not shared_critic else [
@@ -146,7 +146,8 @@ def learn(network, env,
             # if nveh > 1:
             #     # if simulating multiple envs in parallel, impossible to reset agent at the end of the episode in each
             #     # of the environments, so resetting here instead
-            #     agent.reset()
+            agent.reset()
+            env.reset()
             for t_rollout in range(nb_rollout_steps):
                 # Predict next action.
                 #todo no compute Q for now
@@ -187,8 +188,10 @@ def learn(network, env,
                         episode_step[d] = 0
                         epoch_episodes += 1
                         episodes += 1
-                        agent.reset(d)
-                        env.reset_vehicle(d)
+
+                if any(done):
+                    agent.reset()
+                    env.reset()
 
             # Train.
             epoch_actor_losses = []
@@ -240,24 +243,18 @@ def learn(network, env,
         # combined_stats = stats.copy()
         # todo simplified log
         combined_stats = {}
-        combined_stats['rollout/return'] = np.array(
-            [np.mean(epoch_episode_rewards[0]), np.mean(epoch_episode_rewards[1])])
-        combined_stats['rollout/return_std'] = np.array(
-            [np.std(epoch_episode_rewards[0]), np.std(epoch_episode_rewards[1])])
-        combined_stats['rollout/return_history'] = np.array(
-            [np.mean(episode_rewards_history[0]), np.mean(episode_rewards_history[1])])
-        combined_stats['rollout/return_history_std'] = np.array(
-            [np.std(episode_rewards_history[0]), np.std(episode_rewards_history[1])])
-        combined_stats['rollout/episode_steps'] = np.array(
-            [np.mean(epoch_episode_steps[0]), np.mean(epoch_episode_steps[1])])
-        combined_stats['rollout/Q_mean'] = np.array(
-            [np.mean(epoch_qs[0]), np.mean(epoch_qs[1])])
+        for i in range(env.n):
+            combined_stats['rollout/return_%d'%i]=np.mean(epoch_episode_rewards[i])
+            combined_stats['rollout/return_std_%d'%i]=np.std(epoch_episode_rewards[i])
+            combined_stats['rollout/return_history_%d' % i] = np.mean(episode_rewards_history[i])
+            combined_stats['rollout/return_history_std_%d' % i] = np.std(episode_rewards_history[i])
+            combined_stats['rollout/episode_steps_%d' % i] = np.mean(epoch_episode_steps[i])
+            combined_stats['rollout/Q_mean_%d' % i] = np.mean(epoch_qs[i])
+            combined_stats['rollout/actions_mean_%d' % i] = np.mean(epoch_actions[i])
         combined_stats['total/duration'] = duration
         combined_stats['total/steps_per_second'] = float(t) / float(duration)
         combined_stats['total/episodes'] = episodes
         combined_stats['rollout/episodes'] = epoch_episodes
-        combined_stats['rollout/actions_mean'] = np.array(
-            [np.mean(epoch_actions[0]), np.mean(epoch_actions[1])])
         # Evaluation statistics.
         if eval_env is not None:
             combined_stats['eval/return'] = eval_episode_rewards

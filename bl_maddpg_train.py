@@ -33,7 +33,7 @@ def train(arglist):
     learn(network="mlp",
           env=ddpg_env,
           # total_timesteps=400,
-          nb_epoch_cycles=3,
+          nb_epoch_cycles=10,
           nb_rollout_steps=400,
           nb_epochs=3000,
           render=arglist.display,
