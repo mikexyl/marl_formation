@@ -228,11 +228,12 @@ class Scenario(BaseScenario):
 
     # todo now it's success if observed
     def success_reward(self, agent, world):
-        if util.distance_entities(world.veh_centroid, world.goal_landmark) < self.eps_goal:
+        dist=util.distance_entities(world.veh_centroid, world.goal_landmark)
+        if dist < self.eps_goal:
             agent.is_success = True
             return True, self.rew_success
         else:
-            return False, -((agent.dist_to_goal - self.eps_goal) / (
+            return False, -((dist - self.eps_goal) / (
                     2 * world.size_x - self.eps_goal)) * self.rew_success * 0.1
 
     def collision_reward(self, agent, world):
