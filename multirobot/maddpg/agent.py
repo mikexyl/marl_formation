@@ -9,7 +9,7 @@ from baselines import logger
 from baselines.common.mpi_adam import MpiAdam
 from baselines.common.mpi_running_mean_std import RunningMeanStd
 
-from multirobot.maddpg.util import normalize, denormalize, reduce_std, reduce_var
+from multirobot.maddpg.util import normalize, denormalize, reduce_std
 
 try:
     from mpi4py import MPI
@@ -121,11 +121,11 @@ class Agent(object):
 
         # Create target networks.
         target_actor = copy(actor)
-        target_actor.name = 'target_actor'
+        target_actor.name = 'target_actor_%d' % id
         self.target_actor = target_actor
         self.target_actor_tf = self.target_actor(normalized_obs1)
         target_critic = copy(critic)
-        target_critic.name = 'target_critic'
+        target_critic.name = 'target_critic_%d' % id
         self.target_critic = target_critic
 
         # Create networks and core TF parts that are shared across setup parts.
@@ -297,7 +297,7 @@ class Agent(object):
             self.obs0_n: U.adjust_shape(self.obs0_n, [obs0_n]),
             self.actions_n: U.adjust_shape(self.actions_n, [actions_n])
         })
-        return q[0,0]
+        return q[0, 0]
 
     def compute_actions(self, obs, apply_noise=False):
         actions = self.sess.run(self.actor_tf, feed_dict={
