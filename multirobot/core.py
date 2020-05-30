@@ -133,6 +133,10 @@ class World(macore.World):
     def env_entities(self):
         return super(World, self).entities + [self.goal_landmark]
 
+    @property
+    def veh_centroid(self):
+        return np.mean([vehicle.state.p_pos for vehicle in self.vehicles])
+
     def step(self):
         # super(World, self).step()
 

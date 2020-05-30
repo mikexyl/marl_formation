@@ -1,6 +1,8 @@
 import math
+import os
 
 import numpy as np
+import yaml
 from glog import info
 from multiagent.core import Landmark
 from multiagent.scenario import BaseScenario
@@ -8,18 +10,13 @@ from multiagent.scenario import BaseScenario
 from multirobot import util
 from multirobot.core import World, Vehicle
 
-import yaml
-import os
 
 class Benchmark(object):
     def __init__(self):
         self.stat_rew_condition = np.zeros(3)
 
     def print(self):
-        if __debug__:
-            info('episode reward cond stat: %d, %d, %d' % (self.benchmark.stat_rew_condition[0],
-                                                           self.benchmark.stat_rew_condition[1],
-                                                           self.benchmark.stat_rew_condition[2]))
+        pass
 
 
 class Scenario(BaseScenario):
@@ -32,7 +29,7 @@ class Scenario(BaseScenario):
         self.rew_form_ratio = -1.
         self.rew_goal_ratio = 1.
 
-        self.rew_edge = 0.1
+        self.rew_edge = 1.
         self.rew_success = 50.
         self.rew_collision = -100.
         self.rew_penalty = -0.1
@@ -133,27 +130,25 @@ class Scenario(BaseScenario):
 
         return world
 
-    def save(self,world):
+    def save(self, world):
         P_posdict = dict()
-        for i in range(0,50):
+        for i in range(0, 50):
             x_pos = float(world.entities[i].state.p_pos[0])
             y_pos = float(world.entities[i].state.p_pos[1])
-            P_posdict['landmark_'+str(i)] = [x_pos,y_pos]
+            P_posdict['landmark_' + str(i)] = [x_pos, y_pos]
         curpath = os.path.dirname(os.path.realpath(__file__))
         yamlpath = os.path.join(curpath, "scenario_P_pos.yaml")
         with open(yamlpath, "w", encoding="utf-8") as f:
-            yaml.dump(P_posdict, f )
+            yaml.dump(P_posdict, f)
         # print(P_posdict['landmark_35'])
         # print(P_posdict)
 
-    def load(self,file_path,world):
+    def load(self, file_path, world):
         P_posdict = yaml.safe_load(open(file_path, 'r'))
         # print(type(P_posdict))
         # print(P_posdict)
-        for j in range(0,50):
-            world.entities[j].state.p_pos = a = P_posdict['landmark_'+str(j)]
-
-
+        for j in range(0, 50):
+            world.entities[j].state.p_pos = a = P_posdict['landmark_' + str(j)]
 
     # todo set a arg to choose random or fixed obstacles
     def reset_world(self, world):
@@ -210,11 +205,6 @@ class Scenario(BaseScenario):
     def formation_reward(self, agent, world):
         if not len(world.vehicles) > 1:
             return False, 0
-        # 0 nothing
-        # 1 obstacle
-        # 2 agents
-        # 3 goal
-        # 4~4+n vehicles
         # info("%s, vehicle_obs len: %d" % (agent.name, len(agent.vehicles_obs)))
         # todo obs changed, formation not changed yet
         if len(agent.vehicles_obs) > 1:
@@ -238,20 +228,15 @@ class Scenario(BaseScenario):
 
     # todo now it's success if observed
     def success_reward(self, agent, world):
-        # if agent.goal_obs:
-        #     rew = (agent.dist_to_goal - self.eps_goal) / (agent.fov.dist[1] - self.eps_goal) * self.rew_success
-        #     return True, rew
-        # else:
-        #     return False, 0
-        if agent.dist_to_goal < self.eps_goal:
+        if util.distance_entities(world.veh_centroid, world.goal_landmark) < self.eps_goal:
             agent.is_success = True
             return True, self.rew_success
         else:
             return False, -((agent.dist_to_goal - self.eps_goal) / (
-                    2 * world.size_x - self.eps_goal)) * self.rew_success * 0.01
+                    2 * world.size_x - self.eps_goal)) * self.rew_success * 0.1
 
     def collision_reward(self, agent, world):
-        if util.collision_check(agent, world) or agent.is_stuck:
+        if any([agent.is_stuck for agent in world.vehicles]):
             return True, self.rew_collision
         return False, 0
 
@@ -265,52 +250,6 @@ class Scenario(BaseScenario):
         # print(agent.name, agent.state.p_ang)
         agent.goal_obs = False
         agent.vehicles_obs = []
-
-        # obs = np.zeros(agent.fov.res, dtype=np.uint8)
-        # for i in range(agent.fov.grid.shape[0]):
-        #     for j in range(agent.fov.grid.shape[1]):
-        #         cart = util.polar_to_cart(agent.fov.grid[i][j], agent.state.p_ang)
-        #         # todo a little to iterate all objects here
-        #         for entity in world.entities:
-        #             cand = []
-        #             if np.linalg.norm(cart - entity.state.p_pos) <= entity.size + agent.size:
-        #                 if 'landmark' in entity.name or 'wall' in entity.name:
-        #                     cand.append(1)
-        #                 elif 'goal' in entity.name:
-        #                     cand.append(100)
-        #                 elif 'agent' in entity.name:
-        #                     cand.append(1)
-        #                 elif 'vehicle' in entity.name:
-        #                     cand.append(200 + entity.id)
-        #             if len(cand)>1:
-        #                 obs[i][j] = max(cand)
-
-        # # get positions of all entities in this agent's reference frame
-        # for entity in world.landmarks:
-        #     obs, _ = util.add_to_obs_grid(agent, entity, obs, 1)
-        # # communication of all other agents
-        # for other in world.agents:
-        #     if other is agent:
-        #         continue
-        #     obs, _ = util.add_to_obs_grid(agent, other, obs, 2)
-        # # todo observe the goal
-        # obs, observed = util.add_to_obs_grid(agent, world.goal_landmark, obs, 3)
-        # if observed:
-        #     agent.goal_obs = True
-        # # observe other vehicles
-        # for i, other in enumerate(world.vehicles):
-        #     if other is agent:
-        #         continue
-        #     obs, observed = util.add_to_obs_grid(agent, other, obs, agent.id + 4)
-        #     if observed:
-        #         agent.vehicles_obs.append(i)
-
-        # entity_pos = world.goal_landmark.state.p_pos - agent.state.p_pos
-        # entity_polar = util.cart_to_polar(entity_pos)
-        # agent.dist_to_goal = entity_polar[0]
-        # agent.goal_obs = True
-        # # return np.append(obs.reshape(obs.shape[0] * obs.shape[1]), entity_polar)
-        # return obs.reshape(obs.shape[0] * obs.shape[1])
 
         # change obs mode
         obs = np.zeros((len(world.entities), 2))
@@ -333,8 +272,6 @@ class Scenario(BaseScenario):
                     agent.dist_to_goal = entity_polar[0]
 
         return obs.reshape(len(world.entities) * 2)
-
-
 
     def done(self, agent, world):
         # check if succeed
