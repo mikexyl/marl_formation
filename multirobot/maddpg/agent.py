@@ -170,14 +170,14 @@ class Agent(object):
 
         # Configure perturbed actor.
         param_noise_actor = copy(self.actor)
-        param_noise_actor.name = 'param_noise_actor'
+        param_noise_actor.name = 'param_noise_actor_%d' % self.id
         self.perturbed_actor_tf = param_noise_actor(normalized_obs0)
         logger.info('setting up param noise')
         self.perturb_policy_ops = get_perturbed_actor_updates(self.actor, param_noise_actor, self.param_noise_stddev)
 
         # Configure separate copy for stddev adoption.
         adaptive_param_noise_actor = copy(self.actor)
-        adaptive_param_noise_actor.name = 'adaptive_param_noise_actor'
+        adaptive_param_noise_actor.name = 'adaptive_param_noise_actor_%d' % self.id
         adaptive_actor_tf = adaptive_param_noise_actor(normalized_obs0)
         self.perturb_adaptive_policy_ops = get_perturbed_actor_updates(self.actor, adaptive_param_noise_actor,
                                                                        self.param_noise_stddev)
