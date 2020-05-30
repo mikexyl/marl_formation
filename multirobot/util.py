@@ -140,5 +140,7 @@ def parse_args():
 
     parser.add_argument("--debug-display", action="store_true", default=False)
     parser.add_argument('--config_path', help='yaml to load env settings.', default=None, type=str)
-
+    parser.add_argument('--nb_epoch_cycles', type=int, default=3),
+    parser.add_argument('--nb_rollout_steps', type=int, default=400),
+    parser.add_argument('--nb_epochs', type=int, default=None),
     return parser.parse_args()

@@ -33,9 +33,9 @@ def train(arglist):
     learn(network="mlp",
           env=ddpg_env,
           # total_timesteps=400,
-          nb_epoch_cycles=3,
-          nb_rollout_steps=400,
-          nb_epochs=3000,
+          nb_epochs=arglist.nb_epochs,
+          nb_epoch_cycles=arglist.nb_epoch_cycles,
+          nb_rollout_steps=arglist.nb_rollout_steps,
           render=arglist.display,
           normalize_observations=False,
           normalize_returns=False)

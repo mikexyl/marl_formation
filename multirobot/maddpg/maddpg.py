@@ -6,11 +6,9 @@ from collections import deque
 import numpy as np
 from baselines import logger
 from baselines.common import set_global_seeds
-from baselines.ddpg.models import Actor, Critic
 from baselines.ddpg.noise import AdaptiveParamNoiseSpec, NormalActionNoise, OrnsteinUhlenbeckActionNoise
 
 from multirobot.maddpg.maddpg_learner import MADDPG
-from multirobot.maddpg.memory import Memory
 
 try:
     from mpi4py import MPI
@@ -42,9 +40,12 @@ def learn(network, env,
           tau=0.01,
           eval_env=None,
           param_noise_adaption_interval=50,
-          shared_critic=True,
+          shared_critic=False,
           **network_kwargs):
     set_global_seeds(seed)
+
+    if shared_critic:
+        raise NotImplementedError()
 
     if total_timesteps is not None:
         assert nb_epochs is None
@@ -61,12 +62,6 @@ def learn(network, env,
     assert np.array([(np.abs(action_space.low) == action_space.high) for action_space in
                      env.action_space]).all()  # we assume symmetric actions.
 
-    memory = Memory(limit=int(1e5), action_shape=env.action_space_n_shape,
-                    observation_shape=env.observation_space_n_shape, reward_shape=env.reward_shape,
-                    terminal_shape=env.terminal_shape)
-    critic_n = [Critic(network=network, **network_kwargs) for _ in range(env.n)] if not shared_critic else [
-        Critic(network=network, **network_kwargs)]
-    actor_n = [Actor(nb_actions_n[i], network=network, **network_kwargs) for i in range(env.n)]
 
     action_noise_n = []
     param_noise_n = []
@@ -98,8 +93,7 @@ def learn(network, env,
     max_action_n = [action_space.high for action_space in env.action_space]
     logger.info('scaling actions by {} before executing in env'.format(max_action_n))
 
-    agent = MADDPG(actor_n, critic_n, memory, env.observation_space, env.action_space, env.observation_space_n_shape,
-                   env.action_space_n_shape,
+    agent = MADDPG(env, network,
                    gamma=gamma, tau=tau, normalize_returns=normalize_returns,
                    normalize_observations=normalize_observations,
                    batch_size=batch_size, action_noise_n=action_noise_n, param_noise_n=param_noise_n,
@@ -199,7 +193,7 @@ def learn(network, env,
             epoch_adaptive_distances = []
             for t_train in range(nb_train_steps):
                 # Adapt param noise, if necessary.
-                if memory.nb_entries >= batch_size and t_train % param_noise_adaption_interval == 0:
+                if agent.memory_nb_entries >= batch_size and t_train % param_noise_adaption_interval == 0:
                     distance = agent.adapt_param_noise()
                     epoch_adaptive_distances.append(distance)
 
