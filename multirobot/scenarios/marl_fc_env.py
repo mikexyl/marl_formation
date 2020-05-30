@@ -110,7 +110,7 @@ class Scenario(BaseScenario):
         for vehicle in world.vehicles:
             vehicle.goal_a = world.goal_landmark
 
-        world.vehicles = [Vehicle() for i in range(num_vehicles)]
+        world.vehicles = [Vehicle() for _ in range(num_vehicles)]
         for i, vehicle in enumerate(world.vehicles):
             vehicle.name = 'vehicle %d' % i
             vehicle.id = i

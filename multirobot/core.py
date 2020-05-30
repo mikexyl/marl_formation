@@ -25,15 +25,15 @@ class VehicleBodySpeed(object):
 
 
 class Fov(object):
-    def __init__(self, vehicle, ang= math.pi, dist=np.array([0.2, 3]), res=np.array([20, 20])):
+    def __init__(self, vehicle, ang=math.pi, dist=np.array([0.2, 3]), res=np.array([20, 20])):
         self.dist = dist
         if self.dist[0] < vehicle.size:
             self.dist[0] = vehicle.size
         self.ang = ang
         # res[0] -> res of dist, res[1]-> res of ang
         self.res = res
-        self.dist_res = (dist[1] - dist[0]) / (res[0]-1)
-        self.ang_res = ang / (res[1]-1)
+        self.dist_res = (dist[1] - dist[0]) / (res[0] - 1)
+        self.ang_res = ang / (res[1] - 1)
         self.grid = None
         self.grid_init()
 
@@ -65,7 +65,7 @@ class Vehicle(macore.Agent):
 
         self.is_stuck = False
         self.dist_to_goal = None
-        self.is_success=False
+        self.is_success = False
 
     # a minimised vehicle model
     # todo a better model
@@ -135,7 +135,7 @@ class World(macore.World):
 
     @property
     def veh_centroid(self):
-        return np.mean([vehicle.state.p_pos for vehicle in self.vehicles])
+        return np.mean([vehicle.state.p_pos for vehicle in self.vehicles], 0)
 
     def step(self):
         # super(World, self).step()
