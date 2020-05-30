@@ -114,7 +114,7 @@ class Scenario(BaseScenario):
         for i, vehicle in enumerate(world.vehicles):
             vehicle.name = 'vehicle %d' % i
             vehicle.id = i
-            vehicle.collide = False
+            vehicle.collide = True
             vehicle.silent = True
             vehicle.size = 0.15
             if i == 0:
@@ -160,7 +160,7 @@ class Scenario(BaseScenario):
     @staticmethod
     def reset_goal(world):
         # world.goal_landmark.state.p_pos = np.random.uniform(-1, world.size_x - 1, world.dim_p)
-        world.goal_landmark.state.p_pos = np.array([1, 1])
+        world.goal_landmark.state.p_pos = np.array([2., 2.])
 
     def reset_vehicles(self, world, vehicle_id=None):
         radius = np.array([0, world.radius])
