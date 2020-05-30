@@ -58,6 +58,7 @@ class Agent(object):
                  id=None):
 
         assert id is not None
+        self.id = id
         # Inputs.
         self.obs0 = tf.placeholder(tf.float32, shape=(None,) + observation_shape, name='obs0')
         self.obs1 = tf.placeholder(tf.float32, shape=(None,) + observation_shape, name='obs1')
