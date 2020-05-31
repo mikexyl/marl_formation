@@ -179,10 +179,8 @@ def learn(network, env,
 
                 obs = new_obs
 
-                if any(done):
-                    agent.reset()
-                    env.reset()
-                    for d in range(len(done)):
+                for d in range(len(done)):
+                    if done[d]:
                         # Episode done.
                         epoch_episode_rewards[d].append(episode_reward[d][0])
                         episode_rewards_history[d].append(episode_reward[d][0])
@@ -191,6 +189,7 @@ def learn(network, env,
                         episode_step[d] = 0
                         epoch_episodes += 1
                         episodes += 1
+                        agent.reset(d)
 
             # Train.
             epoch_actor_losses = []
