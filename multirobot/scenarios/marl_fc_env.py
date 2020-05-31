@@ -195,22 +195,11 @@ class Scenario(BaseScenario):
         rew_total += rew_success
         return rew_total
 
-
     def formation_reward(self, agent, world):
         if not len(world.vehicles) > 1:
             return False, 0
         # info("%s, vehicle_obs len: %d" % (agent.name, len(agent.vehicles_obs)))
-        # todo obs changed, formation not changed yet
-        if len(agent.vehicles_obs) > 1:
-            world.form_maintainer.add_edges(
-                [(agent.id, vehicle_obs, util.distance_entities(agent, world.vehicles[vehicle_obs]))
-                 for vehicle_obs in agent.vehicles_obs])
-            for i in range(len(agent.vehicles_obs)):
-                for j in range(i + 1, len(agent.vehicles_obs)):
-                    world.form_maintainer.add_edges(
-                        [(agent.vehicles_obs[i], agent.vehicles_obs[j],
-                          util.distance_entities(world.vehicles[agent.vehicles_obs[i]],
-                                                 world.vehicles[agent.vehicles_obs[j]]))])
+        world.update_formation(agent)
         displace, formed = world.form_maintainer.formation_exam(self.eps_form)
         if formed == 1:
             return True, (1 - (np.sum(displace) - self.eps_form * 3) /
@@ -269,7 +258,9 @@ class Scenario(BaseScenario):
                     obs[i] = entity_polar
                     agent.dist_to_goal = entity_polar[0]
 
-        return obs.reshape(len(world.entities) * 2)
+        world.update_formation(agent)
+        return np.append(obs.flatten(),
+                         world.form_maintainer.c_adjencency_matrix.flatten())
 
     def done(self, agent, world):
         return any([agent.is_stuck, agent.is_success])

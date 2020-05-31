@@ -158,3 +158,16 @@ class World(macore.World):
             else:
                 vehicle.move_to(t_ang, t_vel=t_vel)
                 vehicle.is_stuck = True
+
+    def update_formation(self, agent):
+        if not self.form_maintainer.updated and len(agent.vehicles_obs) > 1:
+            self.form_maintainer.add_edges(
+                [(agent.id, vehicle_obs, util.distance_entities(agent, self.vehicles[vehicle_obs]))
+                 for vehicle_obs in agent.vehicles_obs])
+            for i in range(len(agent.vehicles_obs)):
+                for j in range(i + 1, len(agent.vehicles_obs)):
+                    self.form_maintainer.add_edges(
+                        [(agent.vehicles_obs[i], agent.vehicles_obs[j],
+                          util.distance_entities(self.vehicles[agent.vehicles_obs[i]],
+                                                 self.vehicles[agent.vehicles_obs[j]]))])
+        self.form_maintainer.updated = True

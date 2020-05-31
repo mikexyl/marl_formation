@@ -1,13 +1,15 @@
 from math import sqrt
 
 from formation.graph import Graph
-
+import networkx as nx
+import numpy as np
 
 class Maintainer(object):
     def __init__(self):
         self.t_formation = None
         self.c_formation = None
         self.n = None
+        self.updated=False
 
     def set_num_vehicles(self, num_vehicles):
         self.t_formation = Graph(num_vehicles)
@@ -43,6 +45,7 @@ class Maintainer(object):
 
     def reset(self):
         self.c_formation.delete_edges()
+        self.updated=False
 
     # todo consider stability
     def formation_exam(self, eps_form):
@@ -58,3 +61,7 @@ class Maintainer(object):
                 return disp, 2 if all(disp < eps_form) else 1
             else:
                 raise NotImplementedError
+
+    @property
+    def c_adjencency_matrix(self):
+        return np.array(nx.adjacency_matrix(self.c_formation).todense())
