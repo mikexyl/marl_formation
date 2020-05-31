@@ -10,7 +10,7 @@ from baselines.common.mpi_adam import MpiAdam
 from baselines.common.mpi_running_mean_std import RunningMeanStd
 
 from multirobot.maddpg.util import normalize, denormalize, reduce_std
-
+from multirobot.common.base_class import BaseRLModel
 try:
     from mpi4py import MPI
 except ImportError:
@@ -48,7 +48,7 @@ def get_perturbed_actor_updates(actor, perturbed_actor, param_noise_stddev):
     return tf.group(*updates)
 
 
-class Agent(object):
+class Agent(BaseRLModel):
     def __init__(self, actor, critic, memory, observation_shape, action_shape, observation_shape_n, action_shape_n,
                  param_noise=None, action_noise=None,
                  gamma=0.99, tau=0.001, normalize_returns=False, enable_popart=False, normalize_observations=True,
@@ -93,8 +93,7 @@ class Agent(object):
         self.batch_size = batch_size
         self.stats_sample = None
         self.critic_l2_reg = critic_l2_reg
-
-        # Observation normalization.
+     # Observation normalization.
         if self.normalize_observations:
             with tf.variable_scope('agent_%d/obs_rms' % id):
                 self.obs_rms = RunningMeanStd(shape=observation_shape)
@@ -453,3 +452,15 @@ class Agent(object):
             self.sess.run(self.perturb_policy_ops, feed_dict={
                 self.param_noise_stddev: self.param_noise.current_stddev,
             })
+
+    def save(self, save_path, cloudpickle=False):
+        pass
+
+    def load(self, load_path, **kwargs):
+        pass
+
+    def get_parameter_list(self):
+        return (self.params +
+                self.target_params +
+                self.obs_rms_params +
+                self.ret_rms_params)

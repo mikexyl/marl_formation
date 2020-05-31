@@ -68,8 +68,6 @@ def collision_check(agent, world, pos=None, size=None):
 
 
 def distance_entities(entity1, entity2):
-    pos1 = None
-    pos2 = None
     if isinstance(entity1, Entity):
         pos1 = entity1.state.p_pos
     elif isinstance(entity1, np.ndarray):
@@ -103,8 +101,6 @@ def parse_args():
     parser.add_argument("--exp-name", type=str, default=None, help="name of the experiment")
     parser.add_argument("--save-dir", type=str, default="/tmp/policy/",
                         help="directory in which training state and model should be saved")
-    parser.add_argument("--save-rate", type=int, default=20,
-                        help="save model once every time this many episodes are completed")
     parser.add_argument("--load-dir", type=str, default="",
                         help="directory in which training state and model are loaded")
     # Evaluation
@@ -143,4 +139,8 @@ def parse_args():
     parser.add_argument('--nb_epoch_cycles', type=int, default=3),
     parser.add_argument('--nb_rollout_steps', type=int, default=400),
     parser.add_argument('--nb_epochs', type=int, default=None),
+    parser.add_argument("--save_rate", type=int, default=1,
+                        help="save model once every time this many epochs are completed")
+    parser.add_argument("--save_model", action="store_true", default=True)
+
     return parser.parse_args()

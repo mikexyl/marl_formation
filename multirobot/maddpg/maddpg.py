@@ -41,6 +41,11 @@ def learn(network, env,
           eval_env=None,
           param_noise_adaption_interval=50,
           shared_critic=False,
+          save_rate=1,
+          save_path=None,
+          save=True,
+          restore=False,
+          load_path=None,
           **network_kwargs):
     set_global_seeds(seed)
 
@@ -61,7 +66,6 @@ def learn(network, env,
     nb_actions_n = [action_space.shape[-1] for action_space in env.action_space]
     assert np.array([(np.abs(action_space.low) == action_space.high) for action_space in
                      env.action_space]).all()  # we assume symmetric actions.
-
 
     action_noise_n = []
     param_noise_n = []
@@ -100,6 +104,9 @@ def learn(network, env,
                    critic_l2_reg=critic_l2_reg,
                    actor_lr=actor_lr, critic_lr=critic_lr, enable_popart=popart, clip_norm=clip_norm,
                    reward_scale=reward_scale, shared_critic=shared_critic)
+
+    if restore and save_path is not None:
+        agent.load(load_path if load_path is not None else save_path)
 
     logger.info('Using agent with the following configuration:')
     logger.info(str(agent.__dict__.items()))
@@ -144,7 +151,7 @@ def learn(network, env,
             env.reset()
             for t_rollout in range(nb_rollout_steps):
                 # Predict next action.
-                #todo no compute Q for now
+                # todo no compute Q for now
                 action_n, q_n, _, _ = agent.step(obs, apply_noise=True, compute_Q=True)
 
                 # Execute next action.
@@ -184,8 +191,6 @@ def learn(network, env,
                         episode_step[d] = 0
                         epoch_episodes += 1
                         episodes += 1
-
-
 
             # Train.
             epoch_actor_losses = []
@@ -228,6 +233,9 @@ def learn(network, env,
         else:
             mpi_size = 1
 
+        if save and save_rate is not None and epoch % save_rate == 0:
+            agent.save(save_path)
+
         # Log stats.
         # XXX shouldn't call np.mean on variable length lists
         duration = time.time() - start_time
@@ -238,8 +246,8 @@ def learn(network, env,
         # todo simplified log
         combined_stats = {}
         for i in range(env.n):
-            combined_stats['rollout/return_%d'%i]=np.mean(epoch_episode_rewards[i])
-            combined_stats['rollout/return_std_%d'%i]=np.std(epoch_episode_rewards[i])
+            combined_stats['rollout/return_%d' % i] = np.mean(epoch_episode_rewards[i])
+            combined_stats['rollout/return_std_%d' % i] = np.std(epoch_episode_rewards[i])
             combined_stats['rollout/return_history_%d' % i] = np.mean(episode_rewards_history[i])
             combined_stats['rollout/return_history_std_%d' % i] = np.std(episode_rewards_history[i])
             combined_stats['rollout/episode_steps_%d' % i] = np.mean(epoch_episode_steps[i])

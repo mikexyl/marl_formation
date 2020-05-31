@@ -38,7 +38,12 @@ def train(arglist):
           nb_rollout_steps=arglist.nb_rollout_steps,
           render=arglist.display,
           normalize_observations=False,
-          normalize_returns=False)
+          normalize_returns=False,
+          save=arglist.save_model,
+          save_path=arglist.save_path,
+          save_rate=arglist.save_rate,
+          restore=arglist.restore
+          )
 
 
 if __name__ == '__main__':

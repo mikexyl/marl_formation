@@ -3,16 +3,17 @@ import numpy as np
 import tensorflow as tf
 from baselines.ddpg.models import Actor, Critic
 
+from multirobot.common.base_class import BaseMultiAgentRLModel
 from multirobot.maddpg.agent import Agent
 from multirobot.maddpg.memory import Memory
-
+from glog import info
 try:
     from mpi4py import MPI
 except ImportError:
     MPI = None
 
 
-class MADDPG(object):
+class MADDPG(BaseMultiAgentRLModel):
     def __init__(self, env, network,
                  param_noise_n=None,
                  action_noise_n=None,
@@ -20,7 +21,8 @@ class MADDPG(object):
                  batch_size=128, observation_range=(-5., 5.), action_range=(-1., 1.),
                  return_range=(-np.inf, np.inf),
                  critic_l2_reg=0., actor_lr=1e-4, critic_lr=1e-3, clip_norm=None, reward_scale=1.,
-                 shared_critic=False, **network_kwargs):
+                 shared_critic=False,
+                 **network_kwargs):
 
         # todo clean the init process later
 
@@ -145,3 +147,17 @@ class MADDPG(object):
         else:
             for agent in self.agents:
                 agent.reset()
+
+    def save(self, save_path):
+        if save_path is not None:
+            info('saving vars to ' + save_path)
+            U.save_variables(save_path)
+        else:
+            info('save_path is None, not saving')
+
+    def load(self, load_path):
+        if load_path is not None:
+            info('loading vars from ' + load_path)
+            U.load_variables(load_path)
+        else:
+            info('load_path is None, not loading')
