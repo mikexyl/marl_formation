@@ -48,13 +48,13 @@ class Maintainer(object):
     def formation_exam(self, eps_form):
         # info("current graph size: %d" % self.c_formation.size())
         if self.c_formation.size() < (2 * self.n - 3):
-            return 0, False
+            return 0, 0
         else:
             # todo this is a sample logic for triangular shape
             if self.n == 3:
                 sorted_es_c = self.c_formation.sorted_edges
                 sorted_es_t = self.t_formation.sorted_edges
                 disp = abs(sorted_es_c[:, 2] - sorted_es_t[:, 2])
-                return disp, all(disp < eps_form)
+                return disp, 2 if all(disp < eps_form) else 1
             else:
                 raise NotImplementedError

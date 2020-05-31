@@ -183,24 +183,18 @@ class Scenario(BaseScenario):
             world.vehicles[vehicle_id].state.c = np.zeros(world.dim_c)
 
     def reward(self, agent, world):
-        cf, _ = self.formation_reward(agent, world)
+        cf, rew_edge = self.formation_reward(agent, world)
         cs, rew_success = self.success_reward(agent, world)
-        cl, _ = self.collision_reward(agent, world)
+        cl, rew_collision = self.collision_reward(agent, world)
         ce, _ = self.exploration_reward(agent, world)
         self.benchmark.stat_rew_condition += [cf, cs, cl]
 
         rew_total = 0
-        if cf and not cs and not cl:
-            return self.rew_edge
-        else:
-            if cl:
-                rew_total += self.rew_collision
+        rew_total += rew_collision
+        rew_total += rew_edge
+        rew_total += rew_success
+        return rew_total
 
-            rew_total += rew_success
-        if not rew_total == 0:
-            return rew_total
-        else:
-            return self.rew_penalty
 
     def formation_reward(self, agent, world):
         if not len(world.vehicles) > 1:
@@ -209,8 +203,8 @@ class Scenario(BaseScenario):
         # todo obs changed, formation not changed yet
         if len(agent.vehicles_obs) > 1:
             world.form_maintainer.add_edges(
-                [(agent.id, vehicle_obs, util.distance_entities(agent, world.vehicles[vehicle_obs])) for vehicle_obs in
-                 agent.vehicles_obs])
+                [(agent.id, vehicle_obs, util.distance_entities(agent, world.vehicles[vehicle_obs]))
+                 for vehicle_obs in agent.vehicles_obs])
             for i in range(len(agent.vehicles_obs)):
                 for j in range(i + 1, len(agent.vehicles_obs)):
                     world.form_maintainer.add_edges(
@@ -218,17 +212,20 @@ class Scenario(BaseScenario):
                           util.distance_entities(world.vehicles[agent.vehicles_obs[i]],
                                                  world.vehicles[agent.vehicles_obs[j]]))])
         displace, formed = world.form_maintainer.formation_exam(self.eps_form)
-        if formed:
+        if formed == 1:
+            return True, (1 - (np.sum(displace) - self.eps_form * 3) /
+                          (6 - self.eps_form * 3)) * self.rew_edge
+        elif formed == 2:
             return True, self.rew_edge
         else:
-            return False, 0
+            return False, -1
 
     def appr_reward(self, agent, world):
         return 0
 
     # todo now it's success if observed
     def success_reward(self, agent, world):
-        dist=util.distance_entities(world.veh_centroid, world.goal_landmark)
+        dist = util.distance_entities(world.veh_centroid, world.goal_landmark)
         if dist < self.eps_goal:
             agent.is_success = True
             return True, self.rew_success
@@ -275,15 +272,7 @@ class Scenario(BaseScenario):
         return obs.reshape(len(world.entities) * 2)
 
     def done(self, agent, world):
-        # check if succeed
-        # if agent.goal_obs:
-        #     return True
-        # return False
         return any([agent.is_stuck, agent.is_success])
-        # return util.collision_check(agent, world)
-        # todo collision not check here
-        # check if collision
-        # return util.collision_check(agent, world)
 
     def benchmark_data(self, agent, world):
         return 0
