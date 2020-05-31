@@ -1,5 +1,6 @@
 import multiagent.environment as maenv
 import numpy as np
+from glog import info
 
 
 def make_env(scenario_name, arglist, benchmark=False):
@@ -9,6 +10,9 @@ def make_env(scenario_name, arglist, benchmark=False):
     scenario = scenarios.load(scenario_name + ".py").Scenario()
     # create world
     world = scenario.make_world()
+    if arglist.config_path is not None:
+        info('loading world config from ' + arglist.config_path)
+        scenario.load(arglist.config_path, world)
     # create multiagent environment
     if benchmark:
         env = MultiAgentEnv(world, scenario.reset_world, scenario.reward, scenario.observation, scenario.benchmark_data,
