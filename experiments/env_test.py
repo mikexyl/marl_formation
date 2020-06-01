@@ -1,7 +1,7 @@
 import numpy as np
 
 import multirobot.scenarios as scenarios
-from multirobot.environment import MultiAgentEnv
+from multirobot.environment.environment import MultiAgentEnv
 from multirobot.common.util import parse_args
 
 if __name__ == '__main__':

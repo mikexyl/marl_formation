@@ -72,3 +72,6 @@ class Saver(object):
         actions_file = os.path.join(self.actions_path, '%04d-%04d.csv' % (epoch, cycle))
         np.savetxt(actions_file, self.actions, delimiter=',')
         self.actions = None
+
+    def get_paths(self):
+        return self.result_path, self.log_path, self.model_file, self.actions_path
