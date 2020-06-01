@@ -1,7 +1,7 @@
 import numpy as np
 from gym import Env as GymEnv
 
-from multirobot.environment import MultiAgentEnv as MaddpgEnv
+from multirobot.environment.environment import MultiAgentEnv as MaddpgEnv
 
 
 class BaseLinesEnv(GymEnv):

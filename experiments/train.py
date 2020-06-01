@@ -7,7 +7,7 @@ import tensorflow as tf
 import tensorflow.contrib.layers as layers
 from maddpg.trainer.maddpg import MADDPGAgentTrainer
 
-from multirobot.environment import make_env
+from multirobot.environment.environment import make_env
 from multirobot.common.util import parse_args
 
 

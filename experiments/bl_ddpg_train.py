@@ -1,7 +1,7 @@
 from baselines import logger
 
 from multirobot.ddpg.environment import BaseLinesEnv
-from multirobot.environment import make_env
+from multirobot.environment.environment import make_env
 from multirobot.common.util import parse_args
 
 try:

@@ -42,9 +42,9 @@ if __name__ == '__main__':
     latest_actions = np.loadtxt(latest_file, delimiter=',')
 
     assert latest_actions.shape[-1] % 2 == 0
-    n=latest_actions.shape[-1]//2
+    n = latest_actions.shape[-1] // 2
     for action in latest_actions:
-        action=action.reshape(n,2)
+        action = action.reshape(n, 2)
         env.step(action)
         env.render()
         time.sleep(0.1)
