@@ -1,7 +1,7 @@
+import numpy as np
 from gym import Env as GymEnv
 
 from multirobot.environment import MultiAgentEnv as MaddpgEnv
-import numpy as np
 
 
 class BaseLinesEnv(GymEnv):
@@ -10,9 +10,10 @@ class BaseLinesEnv(GymEnv):
             raise NotImplementedError
         else:
             super(BaseLinesEnv, self).__init__()
+            assert maddpg_env.n == 1
             self.maddpg_env = maddpg_env
-            self.action_space = maddpg_env.action_space
-            self.observation_space = maddpg_env.observation_space
+            self.action_space = maddpg_env.action_space[-1]
+            self.observation_space = maddpg_env.observation_space[-1]
             self.n = self.maddpg_env.n
             # self.action_space_n_shape = np.zeros(maddpg_env.action_space[0].shape[-1]*self.n,)
             # self.observation_space_n_shape = (maddpg_env.observation_space[0].shape[-1] * self.n,)
@@ -26,9 +27,9 @@ class BaseLinesEnv(GymEnv):
         action_n = [action.reshape(2) for action in action_n]
         obs_n, rew_n, done_n, info_n = self.maddpg_env.step(action_n)
         obs_n = self.obs_reshape(obs_n)
-        rew_n = np.vstack(rew_n)
-        done_n = np.vstack(done_n)
-        info_n = np.vstack(info_n)
+        rew_n = np.array(rew_n)
+        done_n = np.array(done_n)
+        info_n = np.array(info_n)
         return obs_n, rew_n, done_n, info_n
 
     def reset(self):

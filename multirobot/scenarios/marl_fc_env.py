@@ -41,7 +41,7 @@ class Scenario(BaseScenario):
 
         # set any world properties first
         world.dim_c = 2
-        num_vehicles = 3
+        num_vehicles = 1
         num_agents = 0
         world.num_agents = num_agents
         world.num_vehicles = num_vehicles
