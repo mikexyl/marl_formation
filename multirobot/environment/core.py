@@ -4,7 +4,7 @@ import multiagent.core as macore
 import numpy as np
 
 from formation.maintainer import Maintainer
-from multirobot import util
+from multirobot.common import util
 
 
 class VehicleState(macore.AgentState):

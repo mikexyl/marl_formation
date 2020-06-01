@@ -7,8 +7,8 @@ from glog import info
 from multiagent.core import Landmark
 from multiagent.scenario import BaseScenario
 
-from multirobot import util
-from multirobot.core import World, Vehicle
+from multirobot.common import util
+from multirobot.environment.core import World, Vehicle
 
 
 class Benchmark(object):

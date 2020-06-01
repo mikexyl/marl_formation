@@ -42,11 +42,15 @@ def learn(network, env,
           param_noise_adaption_interval=50,
           shared_critic=False,
           save_rate=1,
-          save_path=None,
-          save=True,
+          save_model=True,
+          save_actions=True,
           restore=False,
-          load_path=None,
+          saver=None,
           **network_kwargs):
+
+    if save_model or save_actions:
+        assert saver is not None
+
     set_global_seeds(seed)
 
     if shared_critic:
@@ -105,8 +109,8 @@ def learn(network, env,
                    actor_lr=actor_lr, critic_lr=critic_lr, enable_popart=popart, clip_norm=clip_norm,
                    reward_scale=reward_scale, shared_critic=shared_critic)
 
-    if restore and save_path is not None:
-        agent.load(load_path if load_path is not None else save_path)
+    if saver is not None and restore:
+        saver.load_model()
 
     logger.info('Using agent with the following configuration:')
     logger.info(str(agent.__dict__.items()))
@@ -154,6 +158,9 @@ def learn(network, env,
                 # todo no compute Q for now
                 action_n, q_n, _, _ = agent.step(obs, apply_noise=True, compute_Q=True)
 
+                if cycle==0 and save_actions:
+                    saver.add_action(action_n)
+
                 # Execute next action.
                 if rank == 0 and render:
                     env.render()
@@ -191,6 +198,9 @@ def learn(network, env,
                         episodes += 1
                         agent.reset(d)
 
+            if save_actions and cycle==0:
+                saver.save_actions(epoch, cycle)
+
             # Train.
             epoch_actor_losses = []
             epoch_critic_losses = []
@@ -227,13 +237,15 @@ def learn(network, env,
                             eval_episode_rewards_history.append(eval_episode_reward[d])
                             eval_episode_reward[d] = 0.0
 
+
+
         if MPI is not None:
             mpi_size = MPI.COMM_WORLD.Get_size()
         else:
             mpi_size = 1
 
-        if save and save_rate is not None and epoch % save_rate == 0:
-            agent.save(save_path)
+        if save_model and save_rate is not None and epoch % save_rate == 0:
+            saver.save_model()
 
         # Log stats.
         # XXX shouldn't call np.mean on variable length lists

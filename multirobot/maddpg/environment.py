@@ -1,6 +1,6 @@
 from gym import Env as GymEnv
 
-from multirobot.environment import MultiAgentEnv as MaddpgEnv
+from multirobot.environment.environment import MultiAgentEnv as MaddpgEnv
 import numpy as np
 
 

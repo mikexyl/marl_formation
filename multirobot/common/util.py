@@ -128,10 +128,9 @@ def parse_args():
                         help='Number of environment copies being run in parallel. When not specified, set to number of cpus for Atari, and to 1 for Mujoco',
                         default=None, type=int)
     parser.add_argument('--reward_scale', help='Reward scale factor. Default: 1.0', default=1.0, type=float)
-    parser.add_argument('--save_path', help='Path to save trained model to', default=None, type=str)
+    parser.add_argument('--result_path', help='Path to save trained model to', default=None, type=str)
     parser.add_argument('--save_video_interval', help='Save video every x steps (0 = disabled)', default=0, type=int)
     parser.add_argument('--save_video_length', help='Length of recorded video. Default: 200', default=200, type=int)
-    parser.add_argument('--log_path', help='Directory to save learning curve data.', default=None, type=str)
     parser.add_argument('--play', default=False, action='store_true')
 
     parser.add_argument("--debug-display", action="store_true", default=False)
@@ -142,5 +141,6 @@ def parse_args():
     parser.add_argument("--save_rate", type=int, default=1,
                         help="save model once every time this many epochs are completed")
     parser.add_argument("--save_model", action="store_true", default=True)
+    parser.add_argument("--save_actions", action="store_true", default=True)
 
     return parser.parse_args()

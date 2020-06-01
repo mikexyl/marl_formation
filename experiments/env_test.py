@@ -1,12 +1,8 @@
-import argparse
-
 import numpy as np
 
 import multirobot.scenarios as scenarios
-from multirobot.environment import MultiAgentEnv, make_env
-from multirobot.util import parse_args
-import yaml
-import os
+from multirobot.environment import MultiAgentEnv
+from multirobot.common.util import parse_args
 
 if __name__ == '__main__':
     # parse arguments

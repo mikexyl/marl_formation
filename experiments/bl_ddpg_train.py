@@ -2,7 +2,7 @@ from baselines import logger
 
 from multirobot.ddpg.environment import BaseLinesEnv
 from multirobot.environment import make_env
-from multirobot.util import parse_args
+from multirobot.common.util import parse_args
 
 try:
     from mpi4py import MPI

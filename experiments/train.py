@@ -8,7 +8,7 @@ import tensorflow.contrib.layers as layers
 from maddpg.trainer.maddpg import MADDPGAgentTrainer
 
 from multirobot.environment import make_env
-from multirobot.util import parse_args
+from multirobot.common.util import parse_args
 
 
 def mlp_model(input, num_outputs, scope, reuse=False, num_units=64, rnn_cell=None):
