@@ -198,7 +198,14 @@ def learn(network, env,
                             episode_step[d] = 0
                             epoch_episodes += 1
                             episodes += 1
-                            agent.reset(d)
+
+            epoch_episode_rewards[d].append(episode_reward[d][0])
+            episode_rewards_history[d].append(episode_reward[d][0])
+            epoch_episode_steps[d].append(episode_step[d])
+            episode_reward[d] = 0.
+            episode_step[d] = 0
+            epoch_episodes += 1
+            episodes += 1
 
             if save_actions and cycle==0:
                 saver.save_actions(epoch, cycle)
