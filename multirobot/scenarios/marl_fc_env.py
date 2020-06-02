@@ -221,7 +221,7 @@ class Scenario(BaseScenario):
         else:
             agent.is_success = False
             return False, -((dist - self.eps_goal) / (
-                    2 * world.size_x - self.eps_goal)) * self.rew_success * 0.1
+                    2 * world.size_x - self.eps_goal)) * self.rew_success * 0.007
 
     def collision_reward(self, agent, world):
         if any([agent.is_stuck for agent in world.vehicles]):
@@ -264,7 +264,8 @@ class Scenario(BaseScenario):
                          world.form_maintainer.c_adjencency_matrix.flatten())
 
     def done(self, agent, world):
-        return any([agent.is_stuck, agent.is_success])
+        # return any([agent.is_stuck, agent.is_success])
+        return agent.is_success
 
     def benchmark_data(self, agent, world):
         return 0

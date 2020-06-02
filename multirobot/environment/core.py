@@ -156,7 +156,7 @@ class World(macore.World):
                 vehicle.move_to(t_ang, t_pos, t_vel)
                 vehicle.is_stuck = False
             else:
-                vehicle.move_to(t_ang, t_vel=t_vel)
+                vehicle.move_to(t_ang, t_pos, t_vel)
                 vehicle.is_stuck = True
 
     def update_formation(self, agent):
