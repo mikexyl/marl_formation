@@ -161,8 +161,9 @@ def learn(network, env,
                 if cycle==0 and save_actions:
                     saver.add_action(action_n)
 
+
                 # Execute next action.
-                if rank == 0 and render:
+                if cycle==0 and rank == 0 and render:
                     env.render()
 
                 # max_action is of dimension A, whereas action is dimension (nenvs, A) - the multiplication gets broadcasted to the batch
@@ -172,8 +173,6 @@ def learn(network, env,
                 # note these outputs are batched from vecenv
 
                 t += 1
-                if rank == 0 and render:
-                    env.render()
                 episode_reward += r
                 episode_step += 1
 

@@ -219,6 +219,7 @@ class Scenario(BaseScenario):
             agent.is_success = True
             return True, self.rew_success
         else:
+            agent.is_success = False
             return False, -((dist - self.eps_goal) / (
                     2 * world.size_x - self.eps_goal)) * self.rew_success * 0.1
 
