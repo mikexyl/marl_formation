@@ -46,7 +46,7 @@ setup(name='marl_formation',
       extras_require=extras,
       description='multi robot formation control based on marl',
       author='Xiangyu Liu',
-      url='https://github.com/openai/baselines',
+      url='https://github.com/LXYYY/marl_formation',
       author_email='xiangyu002@e.ntu.edu.sg',
       version='0.0.1')
 
