@@ -94,7 +94,8 @@ def train(arglist):
             # env.render()
 
             if done or terminal:
-                # glog.info("episode: %d, episode reward: %5.2f" % ((len(episode_rewards)), episode_rewards[-1]))
+                import glog
+                glog.info("episode: %d, episode reward: %5.2f" % ((len(episode_rewards)), episode_rewards[-1]))
                 obs_n = env.reset()
                 episode_step = 0
                 episode_rewards.append(0)

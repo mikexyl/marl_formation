@@ -247,6 +247,7 @@ class Scenario(BaseScenario):
             else:
                 entity_pos = entity.state.p_pos - agent.state.p_pos
                 entity_polar = util.cart_to_polar(entity_pos)
+                entity_polar[1] -= agent.state.p_ang
                 if util.in_fov_check(agent, entity_polar):
                     obs[i] = entity_polar
                     if entity is world.goal_landmark:
@@ -254,7 +255,7 @@ class Scenario(BaseScenario):
                     elif isinstance(entity, Vehicle):
                         agent.vehicles_obs.append(entity.id)
                 else:
-                    obs[i] = np.array([0, 0])
+                    obs[i] = np.array([6, 0])
                 if entity is world.goal_landmark:
                     obs[i] = entity_polar
                     agent.dist_to_goal = entity_polar[0]
