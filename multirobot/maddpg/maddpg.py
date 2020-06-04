@@ -47,7 +47,6 @@ def learn(network, env,
           restore=False,
           saver=None,
           **network_kwargs):
-
     if save_model or save_actions:
         assert saver is not None
 
@@ -158,12 +157,11 @@ def learn(network, env,
                 # todo no compute Q for now
                 action_n, q_n, _, _ = agent.step(obs, apply_noise=True, compute_Q=True)
 
-                if cycle==0 and save_actions:
+                if cycle == 0 and save_actions:
                     saver.add_action(action_n)
 
-
                 # Execute next action.
-                if cycle==0 and rank == 0 and render:
+                if cycle == 0 and rank == 0 and render:
                     env.render()
 
                 # max_action is of dimension A, whereas action is dimension (nenvs, A) - the multiplication gets broadcasted to the batch
@@ -185,11 +183,12 @@ def learn(network, env,
 
                 obs = new_obs
 
-                if any(done):
+                terminal = (t_rollout == nb_rollout_steps)
+                if any(done) or terminal:
                     agent.reset()
                     env.reset()
                     for d in range(len(done)):
-                        if done[d]:
+                        if done[d] or terminal:
                             # Episode done.
                             epoch_episode_rewards[d].append(episode_reward[d][0])
                             episode_rewards_history[d].append(episode_reward[d][0])
@@ -199,15 +198,7 @@ def learn(network, env,
                             epoch_episodes += 1
                             episodes += 1
 
-            epoch_episode_rewards[d].append(episode_reward[d][0])
-            episode_rewards_history[d].append(episode_reward[d][0])
-            epoch_episode_steps[d].append(episode_step[d])
-            episode_reward[d] = 0.
-            episode_step[d] = 0
-            epoch_episodes += 1
-            episodes += 1
-
-            if save_actions and cycle==0:
+            if save_actions and cycle == 0:
                 saver.save_actions(epoch, cycle)
 
             # Train.
@@ -245,8 +236,6 @@ def learn(network, env,
                             eval_episode_rewards.append(eval_episode_reward[d])
                             eval_episode_rewards_history.append(eval_episode_reward[d])
                             eval_episode_reward[d] = 0.0
-
-
 
         if MPI is not None:
             mpi_size = MPI.COMM_WORLD.Get_size()
