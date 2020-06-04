@@ -4,7 +4,7 @@ import multiagent.core as macore
 import numpy as np
 
 from formation.maintainer import Maintainer
-from multirobot.common import util
+from multirobot.common import env_util
 
 
 class VehicleState(macore.AgentState):
@@ -152,7 +152,7 @@ class World(macore.World):
         for i, vehicle in enumerate(self.vehicles):
             vehicle.action_to_speed()
             t_ang, t_pos, t_vel = vehicle.premove(self.dt)
-            if not util.collision_check(vehicle, self, t_pos, vehicle.size):
+            if not env_util.collision_check(vehicle, self, t_pos, vehicle.size):
                 vehicle.move_to(t_ang, t_pos, t_vel)
                 vehicle.is_stuck = False
             else:
@@ -162,12 +162,12 @@ class World(macore.World):
     def update_formation(self, agent):
         if not self.form_maintainer.updated and len(agent.vehicles_obs) > 1:
             self.form_maintainer.add_edges(
-                [(agent.id, vehicle_obs, util.distance_entities(agent, self.vehicles[vehicle_obs]))
+                [(agent.id, vehicle_obs, env_util.distance_entities(agent, self.vehicles[vehicle_obs]))
                  for vehicle_obs in agent.vehicles_obs])
             for i in range(len(agent.vehicles_obs)):
                 for j in range(i + 1, len(agent.vehicles_obs)):
                     self.form_maintainer.add_edges(
                         [(agent.vehicles_obs[i], agent.vehicles_obs[j],
-                          util.distance_entities(self.vehicles[agent.vehicles_obs[i]],
-                                                 self.vehicles[agent.vehicles_obs[j]]))])
+                          env_util.distance_entities(self.vehicles[agent.vehicles_obs[i]],
+                                                     self.vehicles[agent.vehicles_obs[j]]))])
         self.form_maintainer.updated = True

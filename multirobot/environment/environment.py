@@ -1,29 +1,8 @@
 import multiagent.environment as maenv
 import numpy as np
-from glog import info
+from multiagent import rendering
 
-
-def make_env(scenario_name, arglist, benchmark=False):
-    import multirobot.scenarios as scenarios
-
-    # load scenario from script
-    scenario = scenarios.load(scenario_name + ".py").Scenario()
-    # create world
-    world = scenario.make_world()
-    if arglist.config_path is not None:
-        info('loading world config from ' + arglist.config_path)
-        scenario.load(arglist.config_path, world)
-    # create multiagent environment
-    if benchmark:
-        env = MultiAgentEnv(world, scenario.reset_world, scenario.reward, scenario.observation, scenario.benchmark_data,
-                            scenario.done, True, reset_vehicle_callback=scenario.reset_vehicles)
-    else:
-        env = MultiAgentEnv(world, scenario.reset_world, scenario.reward, scenario.observation,
-                            done_callback=scenario.done, shared_viewer=True,
-                            reset_vehicle_callback=scenario.reset_vehicles)
-        # env = MultiAgentEnv(world, scenario.reset_world, scenario.reward, scenario.observation,
-        #                     done_callback=scenario.done, shared_viewer=True)
-    return env
+from multirobot.environment import rendering as mrrendering
 
 
 # override ma.env, mainly for rendering
@@ -74,6 +53,9 @@ class MultiAgentEnv(maenv.MultiAgentEnv):
 
             self.reset_vehicle_callback = reset_vehicle_callback
 
+            self.render_geoms = None
+            self.render_geoms_xform = None
+
     # override to show the entire environment
     def render(self, mode='human'):
         for i in range(len(self.viewers)):
@@ -81,15 +63,12 @@ class MultiAgentEnv(maenv.MultiAgentEnv):
             if self.viewers[i] is None:
                 # import rendering only if we need it (and don't import for headless machines)
                 # from gym.envs.classic_control import rendering
-                from multiagent import rendering
-                self.viewers[i] = rendering.Viewer(700, 700)
+                self.viewers[i] = mrrendering.Viewer(700, 700)
 
             # create rendering geometry
         if self.render_geoms is None:
             # import rendering only if we need it (and don't import for headless machines)
             # from gym.envs.classic_control import rendering
-            from multiagent import rendering
-            from multirobot.environment import rendering as mrrendering
             self.render_geoms = []
             self.render_geoms_xform = []
             for entity in self.world.entities:
@@ -118,7 +97,7 @@ class MultiAgentEnv(maenv.MultiAgentEnv):
                 for geom in self.render_geoms:
                     viewer.add_geom(geom)
 
-        results = []
+        result = None
         for i in range(len(self.viewers)):
             # update bounds to center around agent
             if self.shared_viewer:
@@ -140,9 +119,10 @@ class MultiAgentEnv(maenv.MultiAgentEnv):
                 self.render_geoms_xform[e + v].set_rotation(vehicle.state.p_ang)
 
             # render to display or array
-            results.append(self.viewers[i].render(return_rgb_array=mode == 'rgb_array'))
+            # return image of viewer[0], as [0] consider as global viewer
+            result = self.viewers[i].render(return_rgb_array=(mode == 'rgb_array'))
 
-        return results
+        return result
 
     # todo no need to copy entire
     def _set_action(self, action, agent, action_space, time=None):
@@ -179,7 +159,6 @@ class MultiAgentEnv(maenv.MultiAgentEnv):
                     agent.action.u[1] = +1.0
             else:
                 if self.force_discrete_action:
-                    d = np.argmax(action[0])
                     agent.action.u[0] += action[0][1] - action[0][2]
                     agent.action.u[1] += action[0][3] - action[0][4]
                 if self.discrete_action_space:

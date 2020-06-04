@@ -7,7 +7,7 @@ from glog import info
 from multiagent.core import Landmark
 from multiagent.scenario import BaseScenario
 
-from multirobot.common import util
+from multirobot.common import env_util
 from multirobot.environment.core import World, Vehicle
 
 
@@ -214,7 +214,7 @@ class Scenario(BaseScenario):
 
     # todo now it's success if observed
     def success_reward(self, agent, world):
-        dist = util.distance_entities(world.veh_centroid, world.goal_landmark)
+        dist = env_util.distance_entities(world.veh_centroid, world.goal_landmark)
         if dist < self.eps_goal:
             agent.is_success = True
             return True, self.rew_success
@@ -246,9 +246,9 @@ class Scenario(BaseScenario):
                 obs[i] = np.array([0, 0])
             else:
                 entity_pos = entity.state.p_pos - agent.state.p_pos
-                entity_polar = util.cart_to_polar(entity_pos)
+                entity_polar = env_util.cart_to_polar(entity_pos)
                 entity_polar[1] -= agent.state.p_ang
-                if util.in_fov_check(agent, entity_polar):
+                if env_util.in_fov_check(agent, entity_polar):
                     obs[i] = entity_polar
                     if entity is world.goal_landmark:
                         agent.goal_obs = True

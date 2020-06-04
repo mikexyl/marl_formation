@@ -7,8 +7,7 @@ import tensorflow as tf
 import tensorflow.contrib.layers as layers
 from maddpg.trainer.maddpg import MADDPGAgentTrainer
 
-from multirobot.environment.environment import make_env
-from multirobot.common.util import parse_args
+from multirobot.common.cmd_util import parse_args, make_base_env
 
 
 def mlp_model(input, num_outputs, scope, reuse=False, num_units=64, rnn_cell=None):
@@ -39,7 +38,7 @@ def get_trainers(env, num_adversaries, obs_shape_n, arglist):
 def train(arglist):
     with U.single_threaded_session():
         # Create environment
-        env = make_env(arglist.scenario, arglist, arglist.benchmark)
+        env = make_base_env(arglist.scenario, arglist, arglist.benchmark)
         # Create agent trainers
         obs_shape_n = [env.observation_space[i].shape for i in range(env.n)]
         num_adversaries = min(env.n, arglist.num_adversaries)

@@ -7,9 +7,9 @@ import numpy as np
 
 import multirobot.scenarios as scenarios
 from multirobot.common.saver import Saver
-from multirobot.common.util import parse_args
-from multirobot.environment.environment import MultiAgentEnv, make_env
-from multirobot.maddpg.environment import BaseLinesEnv
+from multirobot.common.cmd_util import parse_args, make_base_env
+from multirobot.environment.environment import MultiAgentEnv
+from multirobot.maddpg.environment import BlMaddpgEnv
 
 if __name__ == '__main__':
     arglist = parse_args()
@@ -18,8 +18,8 @@ if __name__ == '__main__':
 
     results_path, log_path, model_file, actions_path = saver.get_paths()
 
-    env = make_env(arglist.scenario, arglist, arglist.benchmark)
-    ddpg_env = BaseLinesEnv(env)
+    env = make_base_env(arglist.scenario, arglist, arglist.benchmark)
+    ddpg_env = BlMaddpgEnv(env)
 
     env.render()
 

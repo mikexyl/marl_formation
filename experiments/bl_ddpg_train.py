@@ -1,8 +1,7 @@
 from baselines import logger
 
 from multirobot.ddpg.environment import BaseLinesEnv
-from multirobot.environment.environment import make_env
-from multirobot.common.util import parse_args
+from multirobot.common.cmd_util import parse_args, make_base_env
 
 try:
     from mpi4py import MPI
@@ -19,7 +18,7 @@ def configure_logger(log_path, **kwargs):
 
 def train(arglist):
     # Create environment
-    env = make_env(arglist.scenario, arglist, arglist.benchmark)
+    env = make_base_env(arglist.scenario, arglist, arglist.benchmark)
     ddpg_env = BaseLinesEnv(env)
     from multirobot.ddpg.ddpg import learn
 

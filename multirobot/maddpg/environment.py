@@ -1,24 +1,23 @@
-from gym import Env as GymEnv
+import numpy as np
+import gym
 
 from multirobot.environment.environment import MultiAgentEnv as MaddpgEnv
-import numpy as np
 
-
-class BaseLinesEnv(GymEnv):
-    def __init__(self, maddpg_env):
-        if not isinstance(maddpg_env, MaddpgEnv):
+class BlMaddpgEnv(gym.Env):
+    def __init__(self, base_env):
+        if not isinstance(base_env, MaddpgEnv):
             raise NotImplementedError
         else:
-            super(BaseLinesEnv, self).__init__()
-            self.maddpg_env = maddpg_env
-            self.action_space = maddpg_env.action_space
-            self.observation_space = maddpg_env.observation_space
+            super(BlMaddpgEnv, self).__init__()
+            self.maddpg_env = base_env
+            self.action_space = base_env.action_space
+            self.observation_space = base_env.observation_space
             self.n = self.maddpg_env.n
             # self.action_space_n_shape = np.zeros(maddpg_env.action_space[0].shape[-1]*self.n,)
             # self.observation_space_n_shape = (maddpg_env.observation_space[0].shape[-1] * self.n,)
-            self.action_space_n_shape = (self.n, maddpg_env.action_space[0].shape[-1])
+            self.action_space_n_shape = (self.n, base_env.action_space[0].shape[-1])
             self.observation_space_n_shape = (
-                self.n, maddpg_env.observation_space[0].shape[-1])
+                self.n, base_env.observation_space[0].shape[-1])
             self.reward_shape = (self.n, 1)
             self.terminal_shape = (self.n, 1)
 
@@ -39,7 +38,7 @@ class BaseLinesEnv(GymEnv):
         self.maddpg_env.reset_vehicle(agent_id)
 
     def render(self, mode='human'):
-        self.maddpg_env.render()
+        return self.maddpg_env.render(mode=mode)
 
     def close(self):
         pass

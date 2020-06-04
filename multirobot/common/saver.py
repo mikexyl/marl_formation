@@ -38,6 +38,8 @@ class Saver(object):
         os.makedirs(self.actions_path, exist_ok=True)
         self.plots_path = os.path.join(self.result_path, 'plots')
         os.makedirs(self.plots_path, exist_ok=True)
+        self.videos_path = os.path.join(self.result_path, 'videos')
+        os.makedirs(self.videos_path, exist_ok=True)
 
         self.actions = None
 
@@ -74,4 +76,4 @@ class Saver(object):
         self.actions = None
 
     def get_paths(self):
-        return self.result_path, self.log_path, self.model_file, self.actions_path
+        return self.result_path, self.log_path, self.model_file, self.actions_path, self.videos_path
