@@ -141,8 +141,8 @@ def learn(network, env,
     epoch_episode_steps = [[] for _ in range(env.n)]
     epoch_actions = [[] for _ in range(env.n)]
     epoch_qs = [[] for _ in range(env.n)]
-    epoch_episodes = 0
     for epoch in range(nb_epochs):
+        epoch_episodes = 0
         for cycle in range(nb_epoch_cycles):
             from glog import info
             info("epoch %d, cycle %d" % (epoch, cycle))
@@ -183,7 +183,7 @@ def learn(network, env,
 
                 obs = new_obs
 
-                terminal = (t_rollout == nb_rollout_steps)
+                terminal = (t_rollout == (nb_rollout_steps - 1))
                 if any(done) or terminal:
                     agent.reset()
                     env.reset()
