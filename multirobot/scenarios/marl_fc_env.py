@@ -240,29 +240,29 @@ class Scenario(BaseScenario):
         agent.vehicles_obs = []
 
         # change obs mode
-        obs = np.zeros((len(world.entities), 2))
-        for i, entity in enumerate(world.entities):
-            if entity is agent:
-                obs[i] = np.array([0, 0])
-            else:
+        obs = np.ones(agent.fov.res[1]) * agent.fov.dist[1]
+        for entity in world.entities:
+            if entity is not agent:
                 entity_pos = entity.state.p_pos - agent.state.p_pos
                 entity_polar = env_util.cart_to_polar(entity_pos)
-                entity_polar[1] -= agent.state.p_ang
+                # entity_polar[1] -= agent.state.p_ang
                 if env_util.in_fov_check(agent, entity_polar):
-                    obs[i] = entity_polar
+                    _, j = env_util.find_grid_id(agent, entity_polar)
+                    if entity_polar[0] < obs[j]:
+                        obs[j] = entity_polar[0]
                     if entity is world.goal_landmark:
                         agent.goal_obs = True
                     elif isinstance(entity, Vehicle):
                         agent.vehicles_obs.append(entity.id)
                 else:
-                    obs[i] = np.array([6, 0])
+                    pass
                 if entity is world.goal_landmark:
-                    obs[i] = entity_polar
                     agent.dist_to_goal = entity_polar[0]
 
         world.update_formation(agent)
-        return np.append(obs.flatten(),
-                         world.form_maintainer.c_adjencency_matrix.flatten())
+        # return np.append(obs.flatten(),
+        #                  world.form_maintainer.c_adjencency_matrix.flatten())
+        return obs.flatten()
 
     def done(self, agent, world):
         return any([agent.is_stuck, agent.is_success])
