@@ -97,7 +97,6 @@ class MultiAgentEnv(maenv.MultiAgentEnv):
                 for geom in self.render_geoms:
                     viewer.add_geom(geom)
 
-        result = None
         for i in range(len(self.viewers)):
             # update bounds to center around agent
             if self.shared_viewer:
@@ -120,7 +119,7 @@ class MultiAgentEnv(maenv.MultiAgentEnv):
 
             # render to display or array
             # return image of viewer[0], as [0] consider as global viewer
-            result = self.viewers[i].render(return_rgb_array=(mode == 'rgb_array'))
+        result = self.viewers[0].render(return_rgb_array=(mode == 'rgb_array'))
 
         return result
 

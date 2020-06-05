@@ -44,7 +44,7 @@ class VecVideoRecorder(BlRecoder):
         )
 
         self.video_recorder.capture_frame()
-        self.recorded_frames = 1
+        self.recorded_frames = 0
         self.recording = True
 
     def step(self, actions, epoch=None, cycle=None):
@@ -58,11 +58,12 @@ class VecVideoRecorder(BlRecoder):
         self.cycle_id = cycle
 
         if self.recording:
-            self.video_recorder.capture_frame()
-            self.recorded_frames += 1
             if not self._video_enabled():
                 logger.info("Saving video to ", self.video_recorder.path)
                 self.close_video_recorder()
+            else:
+                self.video_recorder.capture_frame()
+                self.recorded_frames += 1
         elif self._video_enabled():
             self.start_video_recorder()
 
@@ -70,3 +71,7 @@ class VecVideoRecorder(BlRecoder):
 
     def _video_enabled(self):
         return self.record_video_trigger(self.cycle_id)
+
+    def reset(self):
+        obs = self.venv.reset()
+        return obs

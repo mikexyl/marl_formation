@@ -265,8 +265,8 @@ class Scenario(BaseScenario):
                          world.form_maintainer.c_adjencency_matrix.flatten())
 
     def done(self, agent, world):
-        # return any([agent.is_stuck, agent.is_success])
-        return agent.is_success
+        return any([agent.is_stuck, agent.is_success])
+        # return agent.is_success
 
     def benchmark_data(self, agent, world):
         return 0

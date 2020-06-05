@@ -9,6 +9,8 @@ from pyglet.gl import *
 class Viewer(marendering.Viewer):
     def render(self, return_rgb_array=False):
         glClearColor(1, 1, 1, 1)
+        # if return rgb array, no window shows
+        # if not return_rgb_array:
         self.window.clear()
         self.window.switch_to()
         self.window.dispatch_events()
@@ -20,6 +22,7 @@ class Viewer(marendering.Viewer):
         self.transform.disable()
         arr = None
         if return_rgb_array:
+            # self.window.close()
             buffer = pyglet.image.get_buffer_manager().get_color_buffer()
             image_data = buffer.get_image_data()
             arr = np.fromstring(image_data.get_data(), dtype=np.uint8, sep='')
@@ -31,6 +34,7 @@ class Viewer(marendering.Viewer):
             # than the requested one.
             arr = arr.reshape(buffer.height, buffer.width, 4)
             arr = arr[::-1, :, 0:3]
+        # if not return_rgb_array:
         self.window.flip()
         self.onetime_geoms = []
         return arr
