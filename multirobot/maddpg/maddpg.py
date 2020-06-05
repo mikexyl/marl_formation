@@ -7,7 +7,7 @@ import numpy as np
 from baselines import logger
 from baselines.common import set_global_seeds
 from baselines.ddpg.noise import AdaptiveParamNoiseSpec, NormalActionNoise, OrnsteinUhlenbeckActionNoise
-
+from multirobot.common.vec_env.vec_video_recorder import VecVideoRecorder
 from multirobot.maddpg.maddpg_learner import MADDPG
 
 try:
@@ -166,9 +166,13 @@ def learn(network, env,
 
                 # max_action is of dimension A, whereas action is dimension (nenvs, A) - the multiplication gets broadcasted to the batch
                 # todo max_action not scale yet
-                new_obs, r, done, info = env.step(action_n, epoch, cycle)
+                new_obs, r, done, info = env.step(action_n)
                 # scale for execution in env (as far as DDPG is concerned, every action is in [-1, 1])
                 # note these outputs are batched from vecenv
+
+                # set epoch and cycle for video recorder
+                if isinstance(env, VecVideoRecorder):
+                    env.set_stample(epoch, cycle)
 
                 t += 1
                 episode_reward += r

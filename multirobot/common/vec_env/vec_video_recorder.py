@@ -47,15 +47,12 @@ class VecVideoRecorder(BlRecoder):
         self.recorded_frames = 0
         self.recording = True
 
-    def step(self, actions, epoch=None, cycle=None):
+    def step(self, actions):
         self.step_async(actions)
-        return self.step_wait(epoch, cycle)
+        return self.step_wait()
 
-    def step_wait(self, epoch=None, cycle=None):
+    def step_wait(self):
         obs, rews, dones, infos = self.venv.step_wait()
-
-        self.epoch_id = epoch
-        self.cycle_id = cycle
 
         if self.recording:
             if not self._video_enabled():
@@ -75,3 +72,7 @@ class VecVideoRecorder(BlRecoder):
     def reset(self):
         obs = self.venv.reset()
         return obs
+
+    def set_stample(self, epoch, cycle):
+        self.epoch_id = epoch
+        self.cycle_id = cycle

@@ -69,7 +69,7 @@ def parse_args():
                         help="save model once every time this many epochs are completed")
     parser.add_argument("--save_model", action="store_true", default=True)
     parser.add_argument("--save_actions", action="store_true", default=True)
-    parser.add_argument("--save_video", action="store_true", default=True)
+    parser.add_argument("--save_video", action="store_true", default=False)
 
     return parser.parse_args()
 
