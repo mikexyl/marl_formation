@@ -2,8 +2,19 @@ import math
 
 import multiagent.rendering as marendering
 import numpy as np
-import pyglet
-from pyglet.gl import *
+from glog import warn
+
+try:
+    import pyglet
+except ImportError:
+    pyglet = None
+    warn('pyglet import error, dont display or save videos')
+
+try:
+    from pyglet.gl import *
+except ImportError:
+    pyglet.gl = None
+    warn('pyglet.gl import error, dont display or save videos')
 
 
 class Viewer(marendering.Viewer):
