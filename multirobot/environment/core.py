@@ -25,7 +25,7 @@ class VehicleBodySpeed(object):
 
 
 class Fov(object):
-    def __init__(self, vehicle, ang=math.pi, dist=np.array([0.2, 3]), res=np.array([20, 20])):
+    def __init__(self, vehicle, ang=math.pi*0.6, dist=np.array([0.2, 3]), res=np.array([20, 20])):
         self.dist = dist
         if self.dist[0] < vehicle.size:
             self.dist[0] = vehicle.size

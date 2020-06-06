@@ -262,7 +262,7 @@ class Scenario(BaseScenario):
         world.update_formation(agent)
         # return np.append(obs.flatten(),
         #                  world.form_maintainer.c_adjencency_matrix.flatten())
-        return obs.flatten()
+        return np.append(obs.flatten(), world.goal_landmark.state.p_pos - agent.state.p_pos)
 
     def done(self, agent, world):
         return any([agent.is_stuck, agent.is_success])
