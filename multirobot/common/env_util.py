@@ -57,9 +57,9 @@ def collision_check(agent, world, pos=None, size=None):
     if size is None:
         size = agent.size
 
-    if not (-world.size_x <= pos[0] <= world.size_x and
-            -world.size_y <= pos[1] <= world.size_y):
-        return True
+    # if not (-world.size_x <= pos[0] <= world.size_x and
+    #         -world.size_y <= pos[1] <= world.size_y):
+    #     return True
     for entity in world.entities:
         if entity is not agent and entity.collide and distance_entities(pos, entity) <= entity.size + size:
             return True

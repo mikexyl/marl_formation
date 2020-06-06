@@ -45,8 +45,8 @@ class Scenario(BaseScenario):
         num_agents = 0
         world.num_agents = num_agents
         world.num_vehicles = num_vehicles
-        num_landmarks = 50
-        res_wall = 30
+        num_landmarks = 0
+        res_wall = 0
         num_walls = res_wall * 4
 
         # init formation
