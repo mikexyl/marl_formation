@@ -259,10 +259,12 @@ class Scenario(BaseScenario):
                 if entity is world.goal_landmark:
                     agent.dist_to_goal = entity_polar[0]
 
+        goal_polar = env_util.cart_to_polar(world.goal_landmark.state.p_pos - agent.state.p_pos)
+        goal_polar -= agent.state.p_ang
         world.update_formation(agent)
         # return np.append(obs.flatten(),
         #                  world.form_maintainer.c_adjencency_matrix.flatten())
-        return np.append(obs.flatten(), world.goal_landmark.state.p_pos - agent.state.p_pos)
+        return np.append(obs.flatten(), goal_polar)
 
     def done(self, agent, world):
         return any([agent.is_stuck, agent.is_success])
