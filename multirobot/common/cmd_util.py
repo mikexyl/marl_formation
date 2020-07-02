@@ -10,6 +10,10 @@ from multirobot.environment.environment import MultiAgentEnv
 
 
 def parse_args():
+    """
+    common arg parser
+    @return:
+    """
     parser = argparse.ArgumentParser("Reinforcement Learning experiments for multiagent environments")
     # Environment
     parser.add_argument("--scenario", type=str, default="simple", help="name of the scenario script")
@@ -75,6 +79,13 @@ def parse_args():
 
 
 def make_base_env(scenario_name, arglist, benchmark=False):
+    """
+    make a base environment multirobot.environment, from a multirobot.scenario
+    @param scenario_name: scenario py file
+    @param arglist: arglist
+    @param benchmark: bool if enable benchmark
+    @return: multirobot.environment
+    """
     import multirobot.scenarios as scenarios
 
     # load scenario from script
@@ -98,6 +109,11 @@ def make_base_env(scenario_name, arglist, benchmark=False):
 
 
 def build_env(arglist):
+    """
+    build wrapped env according to algorithms chosen in arglist
+    @param arglist: arglist
+    @return: env
+    """
     config = tf.ConfigProto(allow_soft_placement=True,
                             intra_op_parallelism_threads=1,
                             inter_op_parallelism_threads=1)
