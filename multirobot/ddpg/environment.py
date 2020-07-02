@@ -5,6 +5,9 @@ from multirobot.environment.environment import MultiAgentEnv as MaddpgEnv
 
 
 class BaseLinesEnv(GymEnv):
+    """
+    wrapper to wrap multirobot.environment as origin BaselinesEnv
+    """
     def __init__(self, maddpg_env):
         if not isinstance(maddpg_env, MaddpgEnv):
             raise NotImplementedError

@@ -1,3 +1,7 @@
+"""
+abstract base classes
+"""
+
 from abc import ABC, abstractmethod
 from collections import OrderedDict
 
