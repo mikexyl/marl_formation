@@ -3,29 +3,29 @@ no big difference from origin baselines.ddpg
 """
 
 import os
+import pickle
 import time
 from collections import deque
-import pickle
 
-from baselines.ddpg.ddpg_learner import DDPG
-from baselines.ddpg.models import Actor, Critic
-from baselines.ddpg.memory import Memory
-from baselines.ddpg.noise import AdaptiveParamNoiseSpec, NormalActionNoise, OrnsteinUhlenbeckActionNoise
-from baselines.common import set_global_seeds
 import baselines.common.tf_util as U
-
-from baselines import logger
 import numpy as np
+from baselines import logger
+from baselines.common import set_global_seeds
+from baselines.ddpg.ddpg_learner import DDPG
+from baselines.ddpg.memory import Memory
+from baselines.ddpg.models import Actor, Critic
+from baselines.ddpg.noise import AdaptiveParamNoiseSpec, NormalActionNoise, OrnsteinUhlenbeckActionNoise
 
 try:
     from mpi4py import MPI
 except ImportError:
     MPI = None
 
+
 def learn(network, env,
           seed=None,
           total_timesteps=None,
-          nb_epochs=None, # with default settings, perform 1M steps total
+          nb_epochs=None,  # with default settings, perform 1M steps total
           nb_epoch_cycles=20,
           nb_rollout_steps=100,
           reward_scale=1.0,
@@ -40,14 +40,13 @@ def learn(network, env,
           popart=False,
           gamma=0.99,
           clip_norm=None,
-          nb_train_steps=50, # per epoch cycle and MPI worker,
+          nb_train_steps=50,  # per epoch cycle and MPI worker,
           nb_eval_steps=100,
-          batch_size=64, # per MPI worker
+          batch_size=64,  # per MPI worker
           tau=0.01,
           eval_env=None,
           param_noise_adaption_interval=50,
           **network_kwargs):
-
     set_global_seeds(seed)
 
     if total_timesteps is not None:
@@ -83,7 +82,8 @@ def learn(network, env,
                 action_noise = NormalActionNoise(mu=np.zeros(nb_actions), sigma=float(stddev) * np.ones(nb_actions))
             elif 'ou' in current_noise_type:
                 _, stddev = current_noise_type.split('_')
-                action_noise = OrnsteinUhlenbeckActionNoise(mu=np.zeros(nb_actions), sigma=float(stddev) * np.ones(nb_actions))
+                action_noise = OrnsteinUhlenbeckActionNoise(mu=np.zeros(nb_actions),
+                                                            sigma=float(stddev) * np.ones(nb_actions))
             else:
                 raise RuntimeError('unknown noise type "{}"'.format(current_noise_type))
 
@@ -91,10 +91,11 @@ def learn(network, env,
     logger.info('scaling actions by {} before executing in env'.format(max_action))
 
     agent = DDPG(actor, critic, memory, env.observation_space.shape, env.action_space.shape,
-        gamma=gamma, tau=tau, normalize_returns=normalize_returns, normalize_observations=normalize_observations,
-        batch_size=batch_size, action_noise=action_noise, param_noise=param_noise, critic_l2_reg=critic_l2_reg,
-        actor_lr=actor_lr, critic_lr=critic_lr, enable_popart=popart, clip_norm=clip_norm,
-        reward_scale=reward_scale)
+                 gamma=gamma, tau=tau, normalize_returns=normalize_returns,
+                 normalize_observations=normalize_observations,
+                 batch_size=batch_size, action_noise=action_noise, param_noise=param_noise, critic_l2_reg=critic_l2_reg,
+                 actor_lr=actor_lr, critic_lr=critic_lr, enable_popart=popart, clip_norm=clip_norm,
+                 reward_scale=reward_scale)
     logger.info('Using agent with the following configuration:')
     logger.info(str(agent.__dict__.items()))
 
@@ -112,14 +113,12 @@ def learn(network, env,
         eval_obs = eval_env.reset()
     nenvs = obs.shape[0]
 
-    episode_reward = np.zeros(nenvs, dtype = np.float32) #vector
-    episode_step = np.zeros(nenvs, dtype = int) # vector
-    episodes = 0 #scalar
-    t = 0 # scalar
+    episode_reward = np.zeros(nenvs, dtype=np.float32)  # vector
+    episode_step = np.zeros(nenvs, dtype=int)  # vector
+    episodes = 0  # scalar
+    t = 0  # scalar
 
     epoch = 0
-
-
 
     start_time = time.time()
 
@@ -147,7 +146,8 @@ def learn(network, env,
                     env.render()
 
                 # max_action is of dimension A, whereas action is dimension (nenvs, A) - the multiplication gets broadcasted to the batch
-                new_obs, r, done, info = env.step(max_action * action)  # scale for execution in env (as far as DDPG is concerned, every action is in [-1, 1])
+                new_obs, r, done, info = env.step(
+                    max_action * action)  # scale for execution in env (as far as DDPG is concerned, every action is in [-1, 1])
                 # note these outputs are batched from vecenv
 
                 t += 1
@@ -159,7 +159,8 @@ def learn(network, env,
                 # Book-keeping.
                 epoch_actions.append(action)
                 epoch_qs.append(q)
-                agent.store_transition(obs, action, r, new_obs, done) #the batched data will be unrolled in memory.py's append.
+                agent.store_transition(obs, action, r, new_obs,
+                                       done)  # the batched data will be unrolled in memory.py's append.
 
                 obs = new_obs
 
@@ -175,8 +176,6 @@ def learn(network, env,
                         episodes += 1
                         if nenvs == 1:
                             agent.reset()
-
-
 
             # Train.
             epoch_actor_losses = []
@@ -198,10 +197,11 @@ def learn(network, env,
             eval_qs = []
             if eval_env is not None:
                 nenvs_eval = eval_obs.shape[0]
-                eval_episode_reward = np.zeros(nenvs_eval, dtype = np.float32)
+                eval_episode_reward = np.zeros(nenvs_eval, dtype=np.float32)
                 for t_rollout in range(nb_eval_steps):
                     eval_action, eval_q, _, _ = agent.step(eval_obs, apply_noise=False, compute_Q=True)
-                    eval_obs, eval_r, eval_done, eval_info = eval_env.step(max_action * eval_action)  # scale for execution in env (as far as DDPG is concerned, every action is in [-1, 1])
+                    eval_obs, eval_r, eval_done, eval_info = eval_env.step(
+                        max_action * eval_action)  # scale for execution in env (as far as DDPG is concerned, every action is in [-1, 1])
                     if render_eval:
                         eval_env.render()
                     eval_episode_reward += eval_r
@@ -244,6 +244,7 @@ def learn(network, env,
             combined_stats['eval/return_history'] = np.mean(eval_episode_rewards_history)
             combined_stats['eval/Q'] = eval_qs
             combined_stats['eval/episodes'] = len(eval_episode_rewards)
+
         def as_scalar(x):
             if isinstance(x, np.ndarray):
                 assert x.size == 1
@@ -251,13 +252,13 @@ def learn(network, env,
             elif np.isscalar(x):
                 return x
             else:
-                raise ValueError('expected scalar, got %s'%x)
+                raise ValueError('expected scalar, got %s' % x)
 
-        combined_stats_sums = np.array([ np.array(x).flatten()[0] for x in combined_stats.values()])
+        combined_stats_sums = np.array([np.array(x).flatten()[0] for x in combined_stats.values()])
         if MPI is not None:
             combined_stats_sums = MPI.COMM_WORLD.allreduce(combined_stats_sums)
 
-        combined_stats = {k : v / mpi_size for (k,v) in zip(combined_stats.keys(), combined_stats_sums)}
+        combined_stats = {k: v / mpi_size for (k, v) in zip(combined_stats.keys(), combined_stats_sums)}
 
         # Total statistics.
         combined_stats['total/epochs'] = epoch + 1
@@ -277,6 +278,5 @@ def learn(network, env,
             if eval_env and hasattr(eval_env, 'get_state'):
                 with open(os.path.join(logdir, 'eval_env_state.pkl'), 'wb') as f:
                     pickle.dump(eval_env.get_state(), f)
-
 
     return agent

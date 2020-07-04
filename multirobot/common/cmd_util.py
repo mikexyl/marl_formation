@@ -2,7 +2,6 @@ import argparse
 
 import tensorflow as tf
 from baselines.common import tf_util
-from baselines.common.vec_env.vec_normalize import VecNormalize
 from glog import info
 
 from multirobot.common.vec_env.marl_vec_env import MarlVecEnv
@@ -65,7 +64,7 @@ def parse_args():
 
     parser.add_argument("--debug-display", action="store_true", default=False)
     parser.add_argument('--config_path', help='yaml to load env settings.', default=None, type=str)
-    parser.add_argument('--log_path', help='yaml to load env settings.', default=None, type=str)
+    parser.add_argument('--log_path', help='path to save log.', default=None, type=str)
     parser.add_argument('--nb_epoch_cycles', type=int, default=3),
     parser.add_argument('--nb_rollout_steps', type=int, default=400),
     parser.add_argument('--nb_epochs', type=int, default=None),
@@ -98,11 +97,14 @@ def make_base_env(scenario_name, arglist, benchmark=False):
     # create multiagent environment
     if benchmark:
         env = MultiAgentEnv(world, scenario.reset_world, scenario.reward, scenario.observation, scenario.benchmark_data,
-                            scenario.done, True, reset_vehicle_callback=scenario.reset_vehicles)
+                            scenario.done if hasattr(scenario, 'done') else None, True,
+                            reset_vehicle_callback=scenario.reset_vehicles if hasattr(scenario,
+                                                                                      'reset_vehicles') else None)
     else:
         env = MultiAgentEnv(world, scenario.reset_world, scenario.reward, scenario.observation,
-                            done_callback=scenario.done, shared_viewer=True,
-                            reset_vehicle_callback=scenario.reset_vehicles)
+                            done_callback=(scenario.done if hasattr(scenario, 'done') else None), shared_viewer=True,
+                            reset_vehicle_callback=scenario.reset_vehicles if hasattr(scenario,
+                                                                                      'reset_vehicles') else None)
         # env = MultiAgentEnv(world, scenario.reset_world, scenario.reward, scenario.observation,
         #                     done_callback=scenario.done, shared_viewer=True)
     return env

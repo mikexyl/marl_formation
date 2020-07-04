@@ -12,7 +12,6 @@ extras = {
         'filelock',
         'pytest',
         'pytest-forked',
-        'matplotlib',
         'pandas'
         'maddpg'
         'multiagent'
@@ -41,7 +40,9 @@ setup(name='marl_formation',
           'click',
           'opencv-python',
           'glog',
-          'networkx'
+          'networkx',
+          'pyyaml',
+          'matplotlib'
       ],
       extras_require=extras,
       description='multi robot formation control based on marl',
