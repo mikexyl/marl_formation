@@ -44,7 +44,7 @@
 		notice: pip install this repo may still leave some dependencies uninstalled, for the setup.py of this package has not been carefully tested.
 
 ## Test:
-
+1. you need to make sure you are in master branch. 
 1. run experiments/env_test.py to test if you have installed anything you need, and can load and show the scenario.
 	```
 	cd marl_formation
