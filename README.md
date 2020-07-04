@@ -45,14 +45,14 @@
 
 ## Test:
 1. you need to make sure you are in master branch. 
-1. run experiments/env_test.py to test if you have installed anything you need, and can load and show the scenario.
+1. run `experiments/env_test.py` to test if you have installed anything you need, and can load and show the scenario.
 	```
 	cd marl_formation
 	python experiments/env_test.py --scenario=<scenario_name>.py
 	```
-	this env_test.py only loads and shows the scenario file, and give agents some simple actions, to test if the scenario is built as you thought. here we use it to test your installation.
+	this `env_test.py` only loads and shows the scenario file, and give agents some simple actions, to test if the scenario is built as you thought. here we use it to test your installation.
     
-    this scenario script, <scenario_name>.py should be placed in `multirobot/scenarios`. and noticeably, we only need to add `.py`, to input the full name of the script here, but it's not the case in steps below.
+    this scenario script, `<scenario_name>.py` should be placed in `multirobot/scenarios`. and noticeably, we only need to add `.py`, to input the full name of the script here, but it's not the case in steps below.
 2. There are three algorithms in this project: original maddpg, ddpg from openai/baselines and the maddpg built on top of baselines/ddpg, here we annote them as *maddpg*, *bl_ddpg*, *bl_maddpg*. At this stage of project, we should test them with single agent scenario.
 	- to train with a scenario,
         ```
