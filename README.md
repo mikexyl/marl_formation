@@ -1,3 +1,4 @@
+**This is a really rough project, and dropped halfway, it doesn't work well as described in README! But you can still take a look for some inspiration.**
 ## Install
 
 1. Denpendencies:
